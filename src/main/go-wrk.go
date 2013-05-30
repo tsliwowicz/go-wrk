@@ -120,6 +120,21 @@ func printDefaults() {
 	})
 }
 
+func estimateHeadersSize(headers http.Header) (result int64) {
+	result = 0
+
+	for k, v := range headers {
+		result += int64(len(k)+len(": \r\n")) 
+		for _, s := range v {
+			result += int64(len(s))
+		}
+	}
+	
+	result += int64(len("\r\n")) 
+	
+	return result
+}
+
 func DoRequest(httpClient *http.Client) (respBodySize int, duration time.Duration) {
 	respBodySize = -1
 	duration = -1
@@ -149,11 +164,11 @@ func DoRequest(httpClient *http.Client) (respBodySize int, duration time.Duratio
 			fmt.Println("An error occured reading body", err)
 		} else {
 			duration = time.Since(start)
-			respBodySize = len(body)
+			respBodySize = len(body) + int(estimateHeadersSize(resp.Header))
 		}
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
 		duration = time.Since(start)
-		respBodySize = int(resp.ContentLength)
+		respBodySize = int(resp.ContentLength) + int(estimateHeadersSize(resp.Header))
 	}
 
 	return
@@ -170,15 +185,14 @@ func Requester() {
 		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error { return NewRedirectError("redirection not allowed") }}
 	}
 
-	transport := &http.Transport{ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms)}
-	httpClient.Transport = transport
+	httpClient.Transport = &http.Transport{ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms)}
 
 	for time.Since(start).Seconds() <= float64(duration) {
 		respBodySize, reqDur := DoRequest(httpClient)
 		if respBodySize > 0 {
 			stats.totBodySize += int64(respBodySize)
 			stats.totDuration += reqDur
-			stats.numRequests++			
+			stats.numRequests++
 		} else {
 			stats.numErrs++
 		}
@@ -225,7 +239,6 @@ func main() {
 
 	aggStats.totDuration /= time.Duration(responders)
 
-	  
 	reqRate := float64(aggStats.numRequests) / aggStats.totDuration.Seconds()
 	bytesRate := float64(aggStats.totBodySize) / aggStats.totDuration.Seconds()
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totBodySize)})
