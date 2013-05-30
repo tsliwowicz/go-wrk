@@ -10,13 +10,15 @@ import (
 	"time"
 )
 
+// RequesterStats used for colelcting aggregate statistics
 type RequesterStats struct {
-	totBodySize int64
+	totRespSize int64
 	totDuration time.Duration
 	numRequests int
 	numErrs     int
 }
 
+// RedirectError specific error type that happens on redirection
 type RedirectError struct {
 	msg string
 }
@@ -30,6 +32,7 @@ func NewRedirectError(message string) *RedirectError {
 	return &rt
 }
 
+// ByteSize a helper struct that implements the String() method and returns a human readable result. Very useful for %v formatting.
 type ByteSize struct {
 	size float64
 }
@@ -65,6 +68,7 @@ func (self ByteSize) String() string {
 
 const APP_VERSION = "0.1"
 
+//default that can be overridden from the command line
 var versionFlag bool = false
 var helpFlag bool = false
 var duration int = 10 //seconds
@@ -85,6 +89,7 @@ func init() {
 	flag.StringVar(&method, "M", "GET", "HTTP method")
 }
 
+//printDefaults a nicer format for the defaults
 func printDefaults() {
 	fmt.Println("Usage: go-wrk <options> <url>")
 	fmt.Println("Options:")
@@ -93,6 +98,7 @@ func printDefaults() {
 	})
 }
 
+//estimateHeadersSize had to create this because headers size was not counted
 func estimateHeadersSize(headers http.Header) (result int64) {
 	result = 0
 
@@ -108,8 +114,10 @@ func estimateHeadersSize(headers http.Header) (result int64) {
 	return result
 }
 
-func DoRequest(httpClient *http.Client) (respBodySize int, duration time.Duration) {
-	respBodySize = -1
+//DoRequest single request implementation. Returns the size of the response and its duration
+//On error - returns -1 on both
+func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
+	respSize = -1
 	duration = -1
 	req, err := http.NewRequest(method, testUrl, nil)
 
@@ -117,6 +125,8 @@ func DoRequest(httpClient *http.Client) (respBodySize int, duration time.Duratio
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		//this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
+		//between an invalid URL that was provided and and redirection error.
 		rr, ok := err.(*url.Error)
 		if !ok {
 			fmt.Println("An error occured doing request", err, rr)
@@ -137,16 +147,18 @@ func DoRequest(httpClient *http.Client) (respBodySize int, duration time.Duratio
 			fmt.Println("An error occured reading body", err)
 		} else {
 			duration = time.Since(start)
-			respBodySize = len(body) + int(estimateHeadersSize(resp.Header))
+			respSize = len(body) + int(estimateHeadersSize(resp.Header))
 		}
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
 		duration = time.Since(start)
-		respBodySize = int(resp.ContentLength) + int(estimateHeadersSize(resp.Header))
+		respSize = int(resp.ContentLength) + int(estimateHeadersSize(resp.Header))
 	}
 
 	return
 }
 
+//Requester a go function for repeatedly making requests and aggregating statistics as long as required
+//When it is done, it sends the results using the statsAggregator channel
 func Requester() {
 	stats := &RequesterStats{}
 	start := time.Now()
@@ -155,15 +167,17 @@ func Requester() {
 	if allowRedirectsFlag {
 		httpClient = &http.Client{}
 	} else {
+		//returning an error when trying to redirect. This prevents the redirection from happening.
 		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error { return NewRedirectError("redirection not allowed") }}
 	}
 
+	//overriding the default timeout
 	httpClient.Transport = &http.Transport{ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms)}
 
 	for time.Since(start).Seconds() <= float64(duration) {
-		respBodySize, reqDur := DoRequest(httpClient)
-		if respBodySize > 0 {
-			stats.totBodySize += int64(respBodySize)
+		respSize, reqDur := DoRequest(httpClient)
+		if respSize > 0 {
+			stats.totRespSize += int64(respSize)
 			stats.totDuration += reqDur
 			stats.numRequests++
 		} else {
@@ -174,6 +188,7 @@ func Requester() {
 }
 
 func main() {
+	//raising the limits. Some performance gains were achieved with the + threads (not a lot).
 	runtime.GOMAXPROCS(runtime.NumCPU() + threads)
 
 	statsAggregator = make(chan *RequesterStats, threads)
@@ -202,7 +217,7 @@ func main() {
 	for stats := range statsAggregator {
 		aggStats.numErrs += stats.numErrs
 		aggStats.numRequests += stats.numRequests
-		aggStats.totBodySize += stats.totBodySize
+		aggStats.totRespSize += stats.totRespSize
 		aggStats.totDuration += stats.totDuration
 		responders++
 		if responders == threads {
@@ -210,11 +225,11 @@ func main() {
 		}
 	}
 
-	aggStats.totDuration /= time.Duration(responders)
+	aggStats.totDuration /= time.Duration(responders) //need to average the aggregated duration
 
 	reqRate := float64(aggStats.numRequests) / aggStats.totDuration.Seconds()
-	bytesRate := float64(aggStats.totBodySize) / aggStats.totDuration.Seconds()
-	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totBodySize)})
+	bytesRate := float64(aggStats.totRespSize) / aggStats.totDuration.Seconds()
+	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totRespSize)})
 	fmt.Printf("Requests/sec:\t%.2f\nTransfer/sec:\t%v\nnum errors %v\n", reqRate, ByteSize{bytesRate}, aggStats.numErrs)
 
 	fmt.Println("Done")
