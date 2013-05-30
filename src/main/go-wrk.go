@@ -108,7 +108,7 @@ func init() {
 	flag.BoolVar(&helpFlag, "help", false, "Print help")
 	flag.IntVar(&threads, "t", 2, "Number of goroutines to use (concurrent requests)")
 	flag.IntVar(&duration, "d", 10, "Duration of test")
-	flag.IntVar(&timeoutms, "T", 50, "Socket/request timeout in ms")
+	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
 }
 
