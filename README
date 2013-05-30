@@ -9,6 +9,11 @@ go-wrk - a HTTP benchmarking tool based in spirit on the excellent wrk tool (htt
   It turns out that it is just as good in terms of throughput! And the amount of code is significantly less.
   go-wrk is the product of one afternoon, and its quality is comparable to wrk.
 
+Building
+
+   Set your $GOPATH to the root of this git repo
+   Run go install go-wrk. The executable will be created under the bin directory.
+
 Basic Usage
 
   ./go-wrk -t 80 -d 5  http://192.168.1.118:8080/json
