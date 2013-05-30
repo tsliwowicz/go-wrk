@@ -11,32 +11,6 @@ import (
 	"time"
 )
 
-/*
-Usage: wrk <options> <url>
-  Options:
-    -c, --connections <N>  Connections to keep open
-    -d, --duration    <T>  Duration of test
-    -t, --threads     <N>  Number of threads to use
-
-    -H, --header      <H>  Add header to request
-    -M, --method      <M>  HTTP method
-        --body        <B>  Request body
-        --latency          Print latency statistics
-        --timeout     <T>  Socket/request timeout
-    -v, --version          Print version details
-*/
-/*
-Running 10s test @ http://yahoo.com
-  2 threads and 10 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     0.00us    0.00us   0.00us     nan%
-    Req/Sec     0.00      0.00     0.00       nan%
-  200 requests in 10.00s, 85.74KB read
-Requests/sec:     19.99
-Transfer/sec:      8.57KB
-
-*/
-
 type RequesterStats struct {
 	totBodySize int64
 	totDuration time.Duration
