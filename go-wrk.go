@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -78,6 +81,7 @@ var method string = "GET"
 var statsAggregator chan *RequesterStats
 var timeoutms int
 var allowRedirectsFlag bool = false
+var interrupted int32 = 0
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -103,14 +107,14 @@ func estimateHeadersSize(headers http.Header) (result int64) {
 	result = 0
 
 	for k, v := range headers {
-		result += int64(len(k)+len(": \r\n")) 
+		result += int64(len(k) + len(": \r\n"))
 		for _, s := range v {
 			result += int64(len(s))
 		}
 	}
-	
-	result += int64(len("\r\n")) 
-	
+
+	result += int64(len("\r\n"))
+
 	return result
 }
 
@@ -174,7 +178,7 @@ func Requester() {
 	//overriding the default timeout
 	httpClient.Transport = &http.Transport{ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms)}
 
-	for time.Since(start).Seconds() <= float64(duration) {
+	for time.Since(start).Seconds() <= float64(duration) && atomic.LoadInt32(&interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient)
 		if respSize > 0 {
 			stats.totRespSize += int64(respSize)
@@ -192,6 +196,9 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() + threads)
 
 	statsAggregator = make(chan *RequesterStats, threads)
+	sigChan := make(chan os.Signal, 1)
+
+	signal.Notify(sigChan, os.Interrupt)
 
 	flag.Parse() // Scan the arguments list
 
@@ -214,14 +221,17 @@ func main() {
 	responders := 0
 	aggStats := RequesterStats{}
 
-	for stats := range statsAggregator {
-		aggStats.numErrs += stats.numErrs
-		aggStats.numRequests += stats.numRequests
-		aggStats.totRespSize += stats.totRespSize
-		aggStats.totDuration += stats.totDuration
-		responders++
-		if responders == threads {
-			break
+	for responders < threads {
+		select {
+		case <-sigChan:
+			atomic.StoreInt32(&interrupted, 1)
+			fmt.Printf("stopping...\n")
+		case stats := <-statsAggregator:
+			aggStats.numErrs += stats.numErrs
+			aggStats.numRequests += stats.numRequests
+			aggStats.totRespSize += stats.totRespSize
+			aggStats.totDuration += stats.totDuration
+			responders++
 		}
 	}
 
