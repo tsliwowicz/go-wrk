@@ -2,8 +2,8 @@ package util
 
 import (
 	"fmt"
-	"time"
 	"net/http"
+	"time"
 )
 
 // RedirectError specific error type that happens on redirection
