@@ -246,10 +246,10 @@ func main() {
 	aggStats.totDuration /= time.Duration(responders) //need to average the aggregated duration
 
 	reqRate := float64(aggStats.numRequests) / aggStats.totDuration.Seconds()
+	avgReqTime := aggStats.totDuration / time.Duration(aggStats.numRequests)
 	bytesRate := float64(aggStats.totRespSize) / aggStats.totDuration.Seconds()
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totRespSize)})
-	fmt.Printf("Requests/sec:\t%.2f\nTransfer/sec:\t%v\nnum errors %v\n", reqRate, ByteSize{bytesRate}, aggStats.numErrs)
-
+	fmt.Printf("Requests/sec:\t%.2f\nTransfer/sec:\t%v\nAvg Req Time:\t%v\nnum errors %v\n", reqRate, ByteSize{bytesRate}, avgReqTime, aggStats.numErrs)
 	fmt.Println("Done")
 
 }
