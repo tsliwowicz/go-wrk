@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"time"
+	"net/http"
 )
 
 // RedirectError specific error type that happens on redirection
@@ -67,4 +68,20 @@ func MinDuration(d1 time.Duration, d2 time.Duration) time.Duration {
 	} else {
 		return d2
 	}
+}
+
+//EstimateHttpHeadersSize had to create this because headers size was not counted
+func EstimateHttpHeadersSize(headers http.Header) (result int64) {
+	result = 0
+
+	for k, v := range headers {
+		result += int64(len(k) + len(": \r\n"))
+		for _, s := range v {
+			result += int64(len(s))
+		}
+	}
+
+	result += int64(len("\r\n"))
+
+	return result
 }

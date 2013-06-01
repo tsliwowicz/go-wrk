@@ -12,17 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 	"github.com/tsliwowicz/go-wrk/util"
+	. "github.com/tsliwowicz/go-wrk/loader"
 )
-
-// RequesterStats used for colelcting aggregate statistics
-type RequesterStats struct {
-	totRespSize    int64
-	totDuration    time.Duration
-	minRequestTime time.Duration
-	maxRequestTime time.Duration
-	numRequests    int
-	numErrs        int
-}
 
 
 const APP_VERSION = "0.1"
@@ -62,22 +53,6 @@ func printDefaults() {
 	})
 }
 
-//estimateHeadersSize had to create this because headers size was not counted
-func estimateHeadersSize(headers http.Header) (result int64) {
-	result = 0
-
-	for k, v := range headers {
-		result += int64(len(k) + len(": \r\n"))
-		for _, s := range v {
-			result += int64(len(s))
-		}
-	}
-
-	result += int64(len("\r\n"))
-
-	return result
-}
-
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
 func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
@@ -111,11 +86,11 @@ func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
 			fmt.Println("An error occured reading body", err)
 		} else {
 			duration = time.Since(start)
-			respSize = len(body) + int(estimateHeadersSize(resp.Header))
+			respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
 		}
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
 		duration = time.Since(start)
-		respSize = int(resp.ContentLength) + int(estimateHeadersSize(resp.Header))
+		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
 	}
 
 	return
@@ -124,7 +99,7 @@ func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
 func Requester() {
-	stats := &RequesterStats{minRequestTime: time.Minute}
+	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
 	var httpClient *http.Client
 
@@ -145,13 +120,13 @@ func Requester() {
 	for time.Since(start).Seconds() <= float64(duration) && atomic.LoadInt32(&interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient)
 		if respSize > 0 {
-			stats.totRespSize += int64(respSize)
-			stats.totDuration += reqDur
-			stats.maxRequestTime = util.MaxDuration(reqDur, stats.maxRequestTime)			
-			stats.minRequestTime = util.MinDuration(reqDur, stats.minRequestTime)
-			stats.numRequests++
+			stats.TotRespSize += int64(respSize)
+			stats.TotDuration += reqDur
+			stats.MaxRequestTime = util.MaxDuration(reqDur, stats.MaxRequestTime)			
+			stats.MinRequestTime = util.MinDuration(reqDur, stats.MinRequestTime)
+			stats.NumRequests++
 		} else {
-			stats.numErrs++
+			stats.NumErrs++
 		}
 	}
 	statsAggregator <- stats
@@ -185,7 +160,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := RequesterStats{minRequestTime: time.Minute}
+	aggStats := RequesterStats{MinRequestTime: time.Minute}
 
 	for responders < goroutines {
 		select {
@@ -193,31 +168,31 @@ func main() {
 			atomic.StoreInt32(&interrupted, 1)
 			fmt.Printf("stopping...\n")
 		case stats := <-statsAggregator:
-			aggStats.numErrs += stats.numErrs
-			aggStats.numRequests += stats.numRequests
-			aggStats.totRespSize += stats.totRespSize
-			aggStats.totDuration += stats.totDuration
-			aggStats.maxRequestTime = util.MaxDuration(aggStats.maxRequestTime, stats.maxRequestTime)
-			aggStats.minRequestTime = util.MinDuration(aggStats.minRequestTime, stats.minRequestTime)
+			aggStats.NumErrs += stats.NumErrs
+			aggStats.NumRequests += stats.NumRequests
+			aggStats.TotRespSize += stats.TotRespSize
+			aggStats.TotDuration += stats.TotDuration
+			aggStats.MaxRequestTime = util.MaxDuration(aggStats.MaxRequestTime, stats.MaxRequestTime)
+			aggStats.MinRequestTime = util.MinDuration(aggStats.MinRequestTime, stats.MinRequestTime)
 			responders++
 		}
 	}
 	
-	if aggStats.numRequests == 0 {
+	if aggStats.NumRequests == 0 {
 		fmt.Println("Error: No statistics collected / no requests found\n")
 		return
 	}
 	
 
-	totThreadDur := aggStats.totDuration / time.Duration(responders) //need to average the aggregated duration
+	totThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
 
-	reqRate := float64(aggStats.numRequests) / totThreadDur.Seconds()
-	avgReqTime := aggStats.totDuration / time.Duration(aggStats.numRequests)
-	bytesRate := float64(aggStats.totRespSize) / totThreadDur.Seconds()
-	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, totThreadDur, util.ByteSize{float64(aggStats.totRespSize)})
+	reqRate := float64(aggStats.NumRequests) / totThreadDur.Seconds()
+	avgReqTime := aggStats.TotDuration / time.Duration(aggStats.NumRequests)
+	bytesRate := float64(aggStats.TotRespSize) / totThreadDur.Seconds()
+	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, totThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
 	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
-	fmt.Printf("Fastest Request:\t%v\n", aggStats.minRequestTime)
-	fmt.Printf("Slowest Request:\t%v\n", aggStats.maxRequestTime)	
-	fmt.Printf("Number of Errors:\t%v\n", aggStats.numErrs)
+	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
+	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)	
+	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
 	
 }
