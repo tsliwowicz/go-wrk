@@ -121,22 +121,6 @@ func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
 	return
 }
 
-func MaxDuration(d1 time.Duration, d2 time.Duration) time.Duration {
-	if d1 > d2 {
-		return d1
-	} else {
-		return d2
-	}
-}
-
-func MinDuration(d1 time.Duration, d2 time.Duration) time.Duration {
-	if d1 < d2 {
-		return d1
-	} else {
-		return d2
-	}
-}
-
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
 func Requester() {
@@ -163,8 +147,8 @@ func Requester() {
 		if respSize > 0 {
 			stats.totRespSize += int64(respSize)
 			stats.totDuration += reqDur
-			stats.maxRequestTime = MaxDuration(reqDur, stats.maxRequestTime)			
-			stats.minRequestTime = MinDuration(reqDur, stats.minRequestTime)
+			stats.maxRequestTime = util.MaxDuration(reqDur, stats.maxRequestTime)			
+			stats.minRequestTime = util.MinDuration(reqDur, stats.minRequestTime)
 			stats.numRequests++
 		} else {
 			stats.numErrs++
@@ -213,8 +197,8 @@ func main() {
 			aggStats.numRequests += stats.numRequests
 			aggStats.totRespSize += stats.totRespSize
 			aggStats.totDuration += stats.totDuration
-			aggStats.maxRequestTime = MaxDuration(aggStats.maxRequestTime, stats.maxRequestTime)
-			aggStats.minRequestTime = MinDuration(aggStats.minRequestTime, stats.minRequestTime)
+			aggStats.maxRequestTime = util.MaxDuration(aggStats.maxRequestTime, stats.maxRequestTime)
+			aggStats.minRequestTime = util.MinDuration(aggStats.minRequestTime, stats.minRequestTime)
 			responders++
 		}
 	}

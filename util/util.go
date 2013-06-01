@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"time"
 )
 
 // RedirectError specific error type that happens on redirection
@@ -50,4 +51,20 @@ func (self ByteSize) String() string {
 	srt := fmt.Sprintf("%.2f%v", rt, suffix)
 
 	return srt
+}
+
+func MaxDuration(d1 time.Duration, d2 time.Duration) time.Duration {
+	if d1 > d2 {
+		return d1
+	} else {
+		return d2
+	}
+}
+
+func MinDuration(d1 time.Duration, d2 time.Duration) time.Duration {
+	if d1 < d2 {
+		return d1
+	} else {
+		return d2
+	}
 }
