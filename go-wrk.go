@@ -15,10 +15,12 @@ import (
 
 // RequesterStats used for colelcting aggregate statistics
 type RequesterStats struct {
-	totRespSize int64
-	totDuration time.Duration
-	numRequests int
-	numErrs     int
+	totRespSize    int64
+	totDuration    time.Duration
+	minRequestTime time.Duration
+	maxRequestTime time.Duration
+	numRequests    int
+	numErrs        int
 }
 
 // RedirectError specific error type that happens on redirection
@@ -165,10 +167,26 @@ func DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
 	return
 }
 
+func MaxDuration(d1 time.Duration, d2 time.Duration) time.Duration {
+	if d1 > d2 {
+		return d1
+	} else {
+		return d2
+	}
+}
+
+func MinDuration(d1 time.Duration, d2 time.Duration) time.Duration {
+	if d1 < d2 {
+		return d1
+	} else {
+		return d2
+	}
+}
+
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
 func Requester() {
-	stats := &RequesterStats{}
+	stats := &RequesterStats{minRequestTime: time.Minute}
 	start := time.Now()
 	var httpClient *http.Client
 
@@ -191,6 +209,8 @@ func Requester() {
 		if respSize > 0 {
 			stats.totRespSize += int64(respSize)
 			stats.totDuration += reqDur
+			stats.maxRequestTime = MaxDuration(reqDur, stats.maxRequestTime)			
+			stats.minRequestTime = MinDuration(reqDur, stats.minRequestTime)
 			stats.numRequests++
 		} else {
 			stats.numErrs++
@@ -220,14 +240,14 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s)\n", duration, testUrl, threads)
+	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, threads)
 
 	for i := 0; i < threads; i++ {
 		go Requester()
 	}
 
 	responders := 0
-	aggStats := RequesterStats{}
+	aggStats := RequesterStats{minRequestTime: time.Minute}
 
 	for responders < threads {
 		select {
@@ -239,17 +259,21 @@ func main() {
 			aggStats.numRequests += stats.numRequests
 			aggStats.totRespSize += stats.totRespSize
 			aggStats.totDuration += stats.totDuration
+			aggStats.maxRequestTime = MaxDuration(aggStats.maxRequestTime, stats.maxRequestTime)
+			aggStats.minRequestTime = MinDuration(aggStats.minRequestTime, stats.minRequestTime)
 			responders++
 		}
 	}
 
-	aggStats.totDuration /= time.Duration(responders) //need to average the aggregated duration
+	totThreadDur := aggStats.totDuration / time.Duration(responders) //need to average the aggregated duration
 
-	reqRate := float64(aggStats.numRequests) / aggStats.totDuration.Seconds()
+	reqRate := float64(aggStats.numRequests) / totThreadDur.Seconds()
 	avgReqTime := aggStats.totDuration / time.Duration(aggStats.numRequests)
-	bytesRate := float64(aggStats.totRespSize) / aggStats.totDuration.Seconds()
+	bytesRate := float64(aggStats.totRespSize) / totThreadDur.Seconds()
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totRespSize)})
-	fmt.Printf("Requests/sec:\t%.2f\nTransfer/sec:\t%v\nAvg Req Time:\t%v\nnum errors %v\n", reqRate, ByteSize{bytesRate}, avgReqTime, aggStats.numErrs)
-	fmt.Println("Done")
-
+	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, ByteSize{bytesRate}, avgReqTime)
+	fmt.Printf("Fastest Request:\t%v\n", aggStats.minRequestTime)
+	fmt.Printf("Slowest Request:\t%v\n", aggStats.maxRequestTime)	
+	fmt.Printf("Number of Errors:\t%v\n", aggStats.numErrs)
+	
 }
