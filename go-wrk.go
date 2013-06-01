@@ -93,7 +93,7 @@ func init() {
 	flag.BoolVar(&helpFlag, "help", false, "Print help")
 	flag.BoolVar(&disableCompression, "no-c", false, "Disable Compression - Prevents sending the \"Accept-Encoding: gzip\" header")
 	flag.BoolVar(&disableKeepAlive, "no-ka", false, "Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests")
-	flag.IntVar(&threads, "t", 2, "Number of goroutines to use (concurrent requests)")
+	flag.IntVar(&threads, "t", 10, "Number of goroutines to use (concurrent requests)")
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
