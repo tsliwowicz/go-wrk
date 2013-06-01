@@ -11,8 +11,8 @@ go-wrk - a HTTP benchmarking tool based in spirit on the excellent wrk tool (htt
 
 Building
 
-   Set your $GOPATH to the root of this git repo
-   Run go install go-wrk. The executable will be created under the bin directory.
+   go get github.com/tsliwowicz/go-wrk
+   This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory
 
 Basic Usage
 
