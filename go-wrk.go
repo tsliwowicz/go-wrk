@@ -77,7 +77,7 @@ const APP_VERSION = "0.1"
 var versionFlag bool = false
 var helpFlag bool = false
 var duration int = 10 //seconds
-var threads int = 2
+var goroutines int = 2
 var testUrl string
 var method string = "GET"
 var statsAggregator chan *RequesterStats
@@ -93,7 +93,7 @@ func init() {
 	flag.BoolVar(&helpFlag, "help", false, "Print help")
 	flag.BoolVar(&disableCompression, "no-c", false, "Disable Compression - Prevents sending the \"Accept-Encoding: gzip\" header")
 	flag.BoolVar(&disableKeepAlive, "no-ka", false, "Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests")
-	flag.IntVar(&threads, "t", 10, "Number of goroutines to use (concurrent requests)")
+	flag.IntVar(&goroutines, "c", 10, "Number of goroutines to use (concurrent connections)")
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
@@ -220,10 +220,10 @@ func Requester() {
 }
 
 func main() {
-	//raising the limits. Some performance gains were achieved with the + threads (not a lot).
-	runtime.GOMAXPROCS(runtime.NumCPU() + threads)
+	//raising the limits. Some performance gains were achieved with the + goroutines (not a lot).
+	runtime.GOMAXPROCS(runtime.NumCPU() + goroutines)
 
-	statsAggregator = make(chan *RequesterStats, threads)
+	statsAggregator = make(chan *RequesterStats, goroutines)
 	sigChan := make(chan os.Signal, 1)
 
 	signal.Notify(sigChan, os.Interrupt)
@@ -240,16 +240,16 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, threads)
+	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
 
-	for i := 0; i < threads; i++ {
+	for i := 0; i < goroutines; i++ {
 		go Requester()
 	}
 
 	responders := 0
 	aggStats := RequesterStats{minRequestTime: time.Minute}
 
-	for responders < threads {
+	for responders < goroutines {
 		select {
 		case <-sigChan:
 			atomic.StoreInt32(&interrupted, 1)
