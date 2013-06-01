@@ -179,7 +179,7 @@ func Requester() {
 		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error { return NewRedirectError("redirection not allowed") }}
 	}
 
-	//overriding the default timeout
+	//overriding the default parameters
 	httpClient.Transport = &http.Transport{
 		DisableCompression:    disableCompression,
 		DisableKeepAlives:     disableKeepAlive,
