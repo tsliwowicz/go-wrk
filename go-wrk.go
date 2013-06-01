@@ -82,11 +82,15 @@ var statsAggregator chan *RequesterStats
 var timeoutms int
 var allowRedirectsFlag bool = false
 var interrupted int32 = 0
+var disableCompression bool
+var disableKeepAlive bool
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
 	flag.BoolVar(&allowRedirectsFlag, "redir", false, "Allow Redirects")
 	flag.BoolVar(&helpFlag, "help", false, "Print help")
+	flag.BoolVar(&disableCompression, "no-c", false, "Disable Compression - Prevents sending the \"Accept-Encoding: gzip\" header")
+	flag.BoolVar(&disableKeepAlive, "no-ka", false, "Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests")
 	flag.IntVar(&threads, "t", 2, "Number of goroutines to use (concurrent requests)")
 	flag.IntVar(&duration, "d", 10, "Duration of test")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
@@ -176,7 +180,11 @@ func Requester() {
 	}
 
 	//overriding the default timeout
-	httpClient.Transport = &http.Transport{ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms)}
+	httpClient.Transport = &http.Transport{
+		DisableCompression:    disableCompression,
+		DisableKeepAlives:     disableKeepAlive,
+		ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms),
+	}
 
 	for time.Since(start).Seconds() <= float64(duration) && atomic.LoadInt32(&interrupted) == 0 {
 		respSize, reqDur := DoRequest(httpClient)
