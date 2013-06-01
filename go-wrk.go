@@ -264,13 +264,19 @@ func main() {
 			responders++
 		}
 	}
+	
+	if aggStats.numRequests == 0 {
+		fmt.Println("Error: No statistics collected / no requests found\n")
+		return
+	}
+	
 
 	totThreadDur := aggStats.totDuration / time.Duration(responders) //need to average the aggregated duration
 
 	reqRate := float64(aggStats.numRequests) / totThreadDur.Seconds()
 	avgReqTime := aggStats.totDuration / time.Duration(aggStats.numRequests)
 	bytesRate := float64(aggStats.totRespSize) / totThreadDur.Seconds()
-	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, aggStats.totDuration, ByteSize{float64(aggStats.totRespSize)})
+	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, totThreadDur, ByteSize{float64(aggStats.totRespSize)})
 	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, ByteSize{bytesRate}, avgReqTime)
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.minRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.maxRequestTime)	
