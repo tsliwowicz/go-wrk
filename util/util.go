@@ -1,0 +1,53 @@
+package util
+
+import (
+	"fmt"
+)
+
+// RedirectError specific error type that happens on redirection
+type RedirectError struct {
+	msg string
+}
+
+func (self *RedirectError) Error() string {
+	return self.msg
+}
+
+func NewRedirectError(message string) *RedirectError {
+	rt := RedirectError{msg: message}
+	return &rt
+}
+
+// ByteSize a helper struct that implements the String() method and returns a human readable result. Very useful for %v formatting.
+type ByteSize struct {
+	Size float64
+}
+
+func (self ByteSize) String() string {
+	var rt float64
+	var suffix string
+	const (
+		Byte  = 1
+		KByte = Byte * 1024
+		MByte = KByte * 1024
+		GByte = MByte * 1024
+	)
+
+	if self.Size > GByte {
+		rt = self.Size / GByte
+		suffix = "GB"
+	} else if self.Size > MByte {
+		rt = self.Size / MByte
+		suffix = "MB"
+	} else if self.Size > KByte {
+		rt = self.Size / KByte
+		suffix = "KB"
+	} else {
+		rt = self.Size
+		suffix = "bytes"
+	}
+
+	srt := fmt.Sprintf("%.2f%v", rt, suffix)
+
+	return srt
+}

@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
+	"github.com/tsliwowicz/go-wrk/util"
 )
 
 // RequesterStats used for colelcting aggregate statistics
@@ -23,53 +24,6 @@ type RequesterStats struct {
 	numErrs        int
 }
 
-// RedirectError specific error type that happens on redirection
-type RedirectError struct {
-	msg string
-}
-
-func (self *RedirectError) Error() string {
-	return self.msg
-}
-
-func NewRedirectError(message string) *RedirectError {
-	rt := RedirectError{msg: message}
-	return &rt
-}
-
-// ByteSize a helper struct that implements the String() method and returns a human readable result. Very useful for %v formatting.
-type ByteSize struct {
-	size float64
-}
-
-func (self ByteSize) String() string {
-	var rt float64
-	var suffix string
-	const (
-		Byte  = 1
-		KByte = Byte * 1024
-		MByte = KByte * 1024
-		GByte = MByte * 1024
-	)
-
-	if self.size > GByte {
-		rt = self.size / GByte
-		suffix = "GB"
-	} else if self.size > MByte {
-		rt = self.size / MByte
-		suffix = "MB"
-	} else if self.size > KByte {
-		rt = self.size / KByte
-		suffix = "KB"
-	} else {
-		rt = self.size
-		suffix = "bytes"
-	}
-
-	srt := fmt.Sprintf("%.2f%v", rt, suffix)
-
-	return srt
-}
 
 const APP_VERSION = "0.1"
 
@@ -194,7 +148,7 @@ func Requester() {
 		httpClient = &http.Client{}
 	} else {
 		//returning an error when trying to redirect. This prevents the redirection from happening.
-		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error { return NewRedirectError("redirection not allowed") }}
+		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error { return util.NewRedirectError("redirection not allowed") }}
 	}
 
 	//overriding the default parameters
@@ -276,8 +230,8 @@ func main() {
 	reqRate := float64(aggStats.numRequests) / totThreadDur.Seconds()
 	avgReqTime := aggStats.totDuration / time.Duration(aggStats.numRequests)
 	bytesRate := float64(aggStats.totRespSize) / totThreadDur.Seconds()
-	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, totThreadDur, ByteSize{float64(aggStats.totRespSize)})
-	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, ByteSize{bytesRate}, avgReqTime)
+	fmt.Printf("%v requests in %v, %v read\n", aggStats.numRequests, totThreadDur, util.ByteSize{float64(aggStats.totRespSize)})
+	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.minRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.maxRequestTime)	
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.numErrs)
