@@ -1,4 +1,5 @@
 go-wrk - a HTTP benchmarking tool based in spirit on the excellent wrk tool (https://github.com/wg/wrk)
+=======================================================================================================
 
   go-wrk is a modern HTTP benchmarking tool capable of generating significant
   load when run on a single multi-core CPU. It builds on go language go routines and scheduler
@@ -10,6 +11,7 @@ go-wrk - a HTTP benchmarking tool based in spirit on the excellent wrk tool (htt
   go-wrk is the product of one afternoon, and its quality is comparable to wrk.
 
 Building
+--------
 
    go get github.com/tsliwowicz/go-wrk
    This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory
@@ -29,6 +31,7 @@ Command line parameters (./go-wrk -help)
 
 
 Basic Usage
+-----------
 
   ./go-wrk -c 80 -d 5  http://192.168.1.118:8080/json
 
@@ -45,6 +48,7 @@ Basic Usage
 	Done
 
 Benchmarking Tips
+-----------------
 
   The machine running go-wrk must have a sufficient number of ephemeral ports
   available and closed sockets should be recycled quickly. To handle the
@@ -52,6 +56,7 @@ Benchmarking Tips
   than the number of concurrent connections being tested.
 
 Acknowledgements
+----------------
 
   golang is awesome. I did not need anything but this to create go-wrk.
   I fully credit the wrk project (https://github.com/wg/wrk) for the inspiration and even parts of this text.
