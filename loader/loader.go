@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+const (
+	USER_AGENT = "go-wrk"
+)
+
 type LoadCfg struct {
 	duration           int //seconds
 	goroutines         int
@@ -49,12 +53,12 @@ func NewLoadCfg(duration int, //seconds
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func (cfg *LoadCfg) DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
-	req, err := http.NewRequest(cfg.method, cfg.testUrl, nil)
+	req, err := http.NewRequest(method, loadUrl, nil)
 
-	req.Header.Add("User-Agent", "go-wrk")
+	req.Header.Add("User-Agent", USER_AGENT)
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -114,7 +118,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := cfg.DoRequest(httpClient)
+		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.testUrl)
 		if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
