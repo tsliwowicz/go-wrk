@@ -70,11 +70,11 @@ func main() {
 
 	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
 
-	cfg := loader.NewLoadCfg(duration, goroutines, testUrl, method, statsAggregator, timeoutms,
+	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, method, statsAggregator, timeoutms,
 		allowRedirectsFlag, disableCompression, disableKeepAlive)
 
 	for i := 0; i < goroutines; i++ {
-		go cfg.Requester()
+		go loadGen.RunSingleLoadSession()
 	}
 
 	responders := 0

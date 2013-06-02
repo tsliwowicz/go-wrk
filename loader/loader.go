@@ -93,7 +93,7 @@ func (cfg LoadCfg) DoRequest(httpClient *http.Client) (respSize int, duration ti
 
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
-func (cfg LoadCfg) Requester() {
+func (cfg LoadCfg) RunSingleLoadSession() {
 	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
 	var httpClient *http.Client
