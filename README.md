@@ -6,7 +6,7 @@ go-wrk is a modern HTTP benchmarking tool capable of generating significant load
 It was created mostly to examine go language (http://golang.org) performance and verbosity compared to C (the language wrk was written in. See - <https://github.com/wg/wrk>).  
 It turns out that it is just as good in terms of throughput! And with a lot less code.  
 
-go-wrk is the product of one afternoon, and its quality is comparable to wrk.
+The majority of go-wrk is the product of one afternoon, and its quality is comparable to wrk.
 
 Building
 --------
