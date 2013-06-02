@@ -1,51 +1,54 @@
 go-wrk - a HTTP benchmarking tool based in spirit on the excellent wrk tool (https://github.com/wg/wrk)
 =======================================================================================================
 
-  go-wrk is a modern HTTP benchmarking tool capable of generating significant
-  load when run on a single multi-core CPU. It builds on go language go routines and scheduler
-  for behind the scenes async IO and concurrency.
+go-wrk is a modern HTTP benchmarking tool capable of generating significant load when run on a single multi-core CPU. It builds on go language go routines and scheduler for behind the scenes async IO and concurrency.
 
-  It was created mostly to examine go language (http://golang.org) performance and verbosity compared to C
-  (the language wrk was written in).  
-  It turns out that it is just as good in terms of throughput! And the amount of code is significantly less.  
-  go-wrk is the product of one afternoon, and its quality is comparable to wrk.
+It was created mostly to examine go language (http://golang.org) performance and verbosity compared to C (the language wrk was written in).  
+It turns out that it is just as good in terms of throughput! And with a lot less code.  
+
+go-wrk is the product of one afternoon, and its quality is comparable to wrk.
 
 Building
 --------
 
-   go get github.com/tsliwowicz/go-wrk  
-   This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory  
+    go get github.com/tsliwowicz/go-wrk  
+
+This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory  
    
 Command line parameters (./go-wrk -help)  
-	Usage: go-wrk <options> <url>  
-	Options:  
-		-M 	 	HTTP method (Default GET)  
-		-T 	 	Socket/request timeout in ms (Default 1000)  
-		-c 	 	Number of goroutines to use (concurrent connections) (Default 10)  
-		-d 	 	Duration of test in seconds (Default 10)  
-		-help 	Print help (Default false)  
-		-no-c 	Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)  
-		-no-ka 	Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)  
-		-redir 	Allow Redirects (Default false)  
-		-v 	 	Print version details (Default false)  
+
+    Usage: go-wrk <options> <url>  
+    Options:  
+        -M      HTTP method (Default GET)  
+        -T      Socket/request timeout in ms (Default 1000)  
+        -c      Number of goroutines to use (concurrent connections) (Default 10)  
+        -d      Duration of test in seconds (Default 10)  
+        -help   Print help (Default false)  
+        -no-c   Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)  
+        -no-ka  Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)  
+        -redir  Allow Redirects (Default false)  
+        -v      Print version details (Default false)  
 
 
 Basic Usage
 -----------
 
-  ./go-wrk -c 80 -d 5  http://192.168.1.118:8080/json
+    ./go-wrk -c 80 -d 5  http://192.168.1.118:8080/json
 
-  This runs a benchmark for 5 seconds, using 80 go routines (connections)
+This runs a benchmark for 5 seconds, using 80 go routines (connections)
 
-  Output:
+Output:
 
-  Running 5s test @ http://192.168.1.118:8080/json  
-  80 goroutine(s)  
-	142470 requests in 4.949028953s, 19.57MB read  
-	Requests/sec:	28787.47  
-	Transfer/sec:	3.95MB  
-	num errors 2  
-	Done  
+    Running 10s test @ http://192.168.1.118:8080/json  
+      80 goroutine(s) running concurrently  
+       142470 requests in 4.949028953s, 19.57MB read  
+         Requests/sec:		28787.47  
+         Transfer/sec:		3.95MB  
+         Avg Req Time:		0.0347ms  
+         Fastest Request:	0.0340ms  
+         Slowest Request:	0.0421ms  
+         Number of Errors:	0  
+
 
 Benchmarking Tips
 -----------------
