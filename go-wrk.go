@@ -83,7 +83,7 @@ func main() {
 	for responders < goroutines {
 		select {
 		case <-sigChan:
-			loader.Stop()
+			loadGen.Stop()
 			fmt.Printf("stopping...\n")
 		case stats := <-statsAggregator:
 			aggStats.NumErrs += stats.NumErrs

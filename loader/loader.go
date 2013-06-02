@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-var interrupted int32 = 0
-
 type LoadCfg struct {
 	duration           int //seconds
 	goroutines         int
@@ -22,6 +20,7 @@ type LoadCfg struct {
 	allowRedirects     bool
 	disableCompression bool
 	disableKeepAlive   bool
+	interrupted int32
 }
 
 // RequesterStats used for colelcting aggregate statistics
@@ -42,15 +41,15 @@ func NewLoadCfg(duration int, //seconds
 	timeoutms int,
 	allowRedirects bool,
 	disableCompression bool,
-	disableKeepAlive bool) (rt LoadCfg) {
-	rt = LoadCfg{duration, goroutines, testUrl, method, statsAggregator, timeoutms,
-		allowRedirects, disableCompression, disableKeepAlive}
+	disableKeepAlive bool) (rt *LoadCfg) {
+	rt = &LoadCfg{duration, goroutines, testUrl, method, statsAggregator, timeoutms,
+		allowRedirects, disableCompression, disableKeepAlive, 0}
 	return
 }
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func (cfg LoadCfg) DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
+func (cfg *LoadCfg) DoRequest(httpClient *http.Client) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
 	req, err := http.NewRequest(cfg.method, cfg.testUrl, nil)
@@ -93,7 +92,7 @@ func (cfg LoadCfg) DoRequest(httpClient *http.Client) (respSize int, duration ti
 
 //Requester a go function for repeatedly making requests and aggregating statistics as long as required
 //When it is done, it sends the results using the statsAggregator channel
-func (cfg LoadCfg) RunSingleLoadSession() {
+func (cfg *LoadCfg) RunSingleLoadSession() {
 	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
 	var httpClient *http.Client
@@ -114,7 +113,7 @@ func (cfg LoadCfg) RunSingleLoadSession() {
 		ResponseHeaderTimeout: time.Millisecond * time.Duration(cfg.timeoutms),
 	}
 
-	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&interrupted) == 0 {
+	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur := cfg.DoRequest(httpClient)
 		if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
@@ -129,6 +128,6 @@ func (cfg LoadCfg) RunSingleLoadSession() {
 	cfg.statsAggregator <- stats
 }
 
-func Stop() {
-	atomic.StoreInt32(&interrupted, 1)
+func (cfg *LoadCfg) Stop() {
+	atomic.StoreInt32(&cfg.interrupted, 1)
 }
