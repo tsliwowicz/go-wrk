@@ -102,12 +102,12 @@ func main() {
 	}
 	
 
-	totThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
+	avgThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
 
-	reqRate := float64(aggStats.NumRequests) / totThreadDur.Seconds()
+	reqRate := float64(aggStats.NumRequests) / avgThreadDur.Seconds()
 	avgReqTime := aggStats.TotDuration / time.Duration(aggStats.NumRequests)
-	bytesRate := float64(aggStats.TotRespSize) / totThreadDur.Seconds()
-	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, totThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
+	bytesRate := float64(aggStats.TotRespSize) / avgThreadDur.Seconds()
+	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, avgThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
 	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)	
