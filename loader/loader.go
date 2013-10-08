@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -24,7 +25,7 @@ type LoadCfg struct {
 	allowRedirects     bool
 	disableCompression bool
 	disableKeepAlive   bool
-	interrupted int32
+	interrupted        int32
 }
 
 // RequesterStats used for colelcting aggregate statistics
@@ -51,17 +52,54 @@ func NewLoadCfg(duration int, //seconds
 	return
 }
 
+func escapeUrlStr(in string) string {
+	qm := strings.Index(in, "?")
+	if qm != -1 {
+		qry := in[qm+1:]
+		qrys := strings.Split(qry, "&")
+		var query string = ""
+		var qEscaped string = ""
+		var first bool = true
+		for _, q := range qrys {
+			qSplit := strings.Split(q, "=")
+			if len(qSplit) == 2 {
+				qEscaped = qSplit[0] + "=" + url.QueryEscape(qSplit[1])
+			} else {
+				qEscaped = qSplit[0]
+			}
+			if first {
+				first = false
+			} else {
+				query += "&"
+			}
+			query += qEscaped
+
+		}
+		return in[:qm] + "?" + query
+	} else {
+		return in
+	}
+}
+
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
 func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
+
+	loadUrl = escapeUrlStr(loadUrl)
+
 	req, err := http.NewRequest(method, loadUrl, nil)
+	if err != nil {
+		fmt.Println("An error occured doing request", err)
+		return
+	}
 
 	req.Header.Add("User-Agent", USER_AGENT)
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
+		fmt.Println("redirect?")
 		//this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
 		//between an invalid URL that was provided and and redirection error.
 		rr, ok := err.(*url.Error)
@@ -71,6 +109,7 @@ func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize
 		}
 	}
 	if resp == nil {
+		fmt.Println("empty response")
 		return
 	}
 	defer func() {
@@ -78,17 +117,18 @@ func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize
 			resp.Body.Close()
 		}
 	}()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("An error occured reading body", err)
+	}
 	if resp.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println("An error occured reading body", err)
-		} else {
-			duration = time.Since(start)
-			respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
-		}
+		duration = time.Since(start)
+		respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
 		duration = time.Since(start)
 		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
+	} else {
+		fmt.Println("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req)
 	}
 
 	return
