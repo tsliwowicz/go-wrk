@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"	
+	"fmt"
+	"github.com/tsliwowicz/go-wrk/loader"
+	"github.com/tsliwowicz/go-wrk/util"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
 	"time"
-	"github.com/tsliwowicz/go-wrk/util"
-	"github.com/tsliwowicz/go-wrk/loader"
 )
 
 const APP_VERSION = "0.1"
@@ -25,6 +26,7 @@ var timeoutms int
 var allowRedirectsFlag bool = false
 var disableCompression bool
 var disableKeepAlive bool
+var playbackFile string
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -36,6 +38,7 @@ func init() {
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
+	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
 }
 
 //printDefaults a nicer format for the defaults
@@ -58,7 +61,23 @@ func main() {
 
 	flag.Parse() // Scan the arguments list
 
-	testUrl = flag.Arg(0)
+	if playbackFile != "<empty>" {
+		file, err := os.Open(playbackFile) // For read access.
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		url, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		testUrl = string(url)
+	} else {
+		testUrl = flag.Arg(0)
+	}
+
 
 	if versionFlag {
 		fmt.Println("Version:", APP_VERSION)
@@ -95,12 +114,11 @@ func main() {
 			responders++
 		}
 	}
-	
+
 	if aggStats.NumRequests == 0 {
 		fmt.Println("Error: No statistics collected / no requests found\n")
 		return
 	}
-	
 
 	avgThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
 
@@ -110,7 +128,7 @@ func main() {
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, avgThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
 	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
-	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)	
+	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
-	
+
 }
