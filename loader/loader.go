@@ -2,13 +2,14 @@ package loader
 
 import (
 	"fmt"
-	"github.com/tsliwowicz/go-wrk/util"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/tsliwowicz/go-wrk/util"
 )
 
 const (
@@ -20,6 +21,7 @@ type LoadCfg struct {
 	goroutines         int
 	testUrl            string
 	method             string
+	host               string
 	statsAggregator    chan *RequesterStats
 	timeoutms          int
 	allowRedirects     bool
@@ -42,12 +44,13 @@ func NewLoadCfg(duration int, //seconds
 	goroutines int,
 	testUrl string,
 	method string,
+	host string,
 	statsAggregator chan *RequesterStats,
 	timeoutms int,
 	allowRedirects bool,
 	disableCompression bool,
 	disableKeepAlive bool) (rt *LoadCfg) {
-	rt = &LoadCfg{duration, goroutines, testUrl, method, statsAggregator, timeoutms,
+	rt = &LoadCfg{duration, goroutines, testUrl, method, host, statsAggregator, timeoutms,
 		allowRedirects, disableCompression, disableKeepAlive, 0}
 	return
 }
@@ -83,7 +86,7 @@ func escapeUrlStr(in string) string {
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, method, host, loadUrl string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
 
@@ -96,6 +99,9 @@ func DoRequest(httpClient *http.Client, method string, loadUrl string) (respSize
 	}
 
 	req.Header.Add("User-Agent", USER_AGENT)
+	if host != "" {
+		req.Host = host
+	}
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -158,7 +164,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.testUrl)
+		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.host, cfg.testUrl)
 		if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
