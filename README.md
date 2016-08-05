@@ -16,19 +16,20 @@ Building
 This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory  
    
 Command line parameters (./go-wrk -help)  
-
+	
     Usage: go-wrk <options> <url>  
-    Options:  
-        -M      HTTP method (Default GET)  
-        -T      Socket/request timeout in ms (Default 1000)  
-        -c      Number of goroutines to use (concurrent connections) (Default 10)  
-        -d      Duration of test in seconds (Default 10)  
-        -help   Print help (Default false)  
-        -no-c   Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)  
-        -no-ka  Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)  
-        -redir  Allow Redirects (Default false)  
-        -v      Print version details (Default false)  
-
+    Options:
+        -H 	 Host Header (Default )
+        -M 	 HTTP method (Default GET)
+        -T 	 Socket/request timeout in ms (Default 1000)
+        -c 	 Number of goroutines to use (concurrent connections) (Default 10)
+        -d 	 Duration of test in seconds (Default 10)
+        -f 	 Playback file name (Default <empty>)
+        -help 	 Print help (Default false)
+        -no-c 	 Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)
+        -no-ka 	 Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)
+        -redir 	 Allow Redirects (Default false)
+        -v 	 Print version details (Default false)
 
 Basic Usage
 -----------
