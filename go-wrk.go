@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/tsliwowicz/go-wrk/loader"
-	"github.com/tsliwowicz/go-wrk/util"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
 	"time"
+
+	"github.com/tsliwowicz/go-wrk/loader"
+	"github.com/tsliwowicz/go-wrk/util"
 )
 
 const APP_VERSION = "0.1"
@@ -21,6 +22,7 @@ var duration int = 10 //seconds
 var goroutines int = 2
 var testUrl string
 var method string = "GET"
+var host string
 var statsAggregator chan *loader.RequesterStats
 var timeoutms int
 var allowRedirectsFlag bool = false
@@ -38,6 +40,7 @@ func init() {
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
+	flag.StringVar(&host, "H", "", "Host Header")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
 }
 
@@ -78,7 +81,6 @@ func main() {
 		testUrl = flag.Arg(0)
 	}
 
-
 	if versionFlag {
 		fmt.Println("Version:", APP_VERSION)
 		return
@@ -89,7 +91,7 @@ func main() {
 
 	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
 
-	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, method, statsAggregator, timeoutms,
+	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, method, host, statsAggregator, timeoutms,
 		allowRedirectsFlag, disableCompression, disableKeepAlive)
 
 	for i := 0; i < goroutines; i++ {
