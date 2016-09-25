@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -20,6 +21,7 @@ type LoadCfg struct {
 	duration           int //seconds
 	goroutines         int
 	testUrl            string
+	reqBody            string
 	method             string
 	host               string
 	statsAggregator    chan *RequesterStats
@@ -43,6 +45,7 @@ type RequesterStats struct {
 func NewLoadCfg(duration int, //seconds
 	goroutines int,
 	testUrl string,
+	reqBody string,
 	method string,
 	host string,
 	statsAggregator chan *RequesterStats,
@@ -50,7 +53,7 @@ func NewLoadCfg(duration int, //seconds
 	allowRedirects bool,
 	disableCompression bool,
 	disableKeepAlive bool) (rt *LoadCfg) {
-	rt = &LoadCfg{duration, goroutines, testUrl, method, host, statsAggregator, timeoutms,
+	rt = &LoadCfg{duration, goroutines, testUrl, reqBody, method, host, statsAggregator, timeoutms,
 		allowRedirects, disableCompression, disableKeepAlive, 0}
 	return
 }
@@ -86,13 +89,18 @@ func escapeUrlStr(in string) string {
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func DoRequest(httpClient *http.Client, method, host, loadUrl string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
 
 	loadUrl = escapeUrlStr(loadUrl)
 
-	req, err := http.NewRequest(method, loadUrl, nil)
+	var buf *bytes.Buffer
+	if len(reqBody) > 0 {
+		buf = bytes.NewBufferString(reqBody)
+	}
+
+	req, err := http.NewRequest(method, loadUrl, buf)
 	if err != nil {
 		fmt.Println("An error occured doing request", err)
 		return
@@ -164,7 +172,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.host, cfg.testUrl)
+		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
