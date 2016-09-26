@@ -29,6 +29,7 @@ var allowRedirectsFlag bool = false
 var disableCompression bool
 var disableKeepAlive bool
 var playbackFile string
+var reqBody string
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -42,6 +43,7 @@ func init() {
 	flag.StringVar(&method, "M", "GET", "HTTP method")
 	flag.StringVar(&host, "H", "", "Host Header")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
+	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
 }
 
 //printDefaults a nicer format for the defaults
@@ -91,7 +93,17 @@ func main() {
 
 	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
 
-	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, method, host, statsAggregator, timeoutms,
+	if len(reqBody) > 0 && reqBody[0] == '@' {
+		bodyFilename := reqBody[1:]
+		data, err := ioutil.ReadFile(bodyFilename)
+		if err != nil {
+			fmt.Println(fmt.Errorf("could not read file %q: %v", bodyFilename, err))
+			os.Exit(1)
+		}
+		reqBody = string(data)
+	}
+
+	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, statsAggregator, timeoutms,
 		allowRedirectsFlag, disableCompression, disableKeepAlive)
 
 	for i := 0; i < goroutines; i++ {
