@@ -3,6 +3,7 @@ package loader
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -95,7 +96,7 @@ func DoRequest(httpClient *http.Client, method, host, loadUrl, reqBody string) (
 
 	loadUrl = escapeUrlStr(loadUrl)
 
-	var buf *bytes.Buffer
+	var buf io.Reader
 	if len(reqBody) > 0 {
 		buf = bytes.NewBufferString(reqBody)
 	}
