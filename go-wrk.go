@@ -70,10 +70,12 @@ func main() {
 
 	flag.Parse() // Scan the arguments list
 	header = make(map[string]string)
-	headerPairs := strings.Split(headerStr, ";")
-	for _, hdr := range headerPairs {
-		hp := strings.Split(hdr, ":")
-		header[hp[0]] = hp[1]
+	if headerStr != "" {
+		headerPairs := strings.Split(headerStr, ";")
+		for _, hdr := range headerPairs {
+			hp := strings.Split(hdr, ":")
+			header[hp[0]] = hp[1]
+		}
 	}
 
 	if playbackFile != "<empty>" {
