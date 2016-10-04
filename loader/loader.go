@@ -25,6 +25,7 @@ type LoadCfg struct {
 	reqBody            string
 	method             string
 	host               string
+	header             map[string]string
 	statsAggregator    chan *RequesterStats
 	timeoutms          int
 	allowRedirects     bool
@@ -49,12 +50,13 @@ func NewLoadCfg(duration int, //seconds
 	reqBody string,
 	method string,
 	host string,
+	header map[string]string,
 	statsAggregator chan *RequesterStats,
 	timeoutms int,
 	allowRedirects bool,
 	disableCompression bool,
 	disableKeepAlive bool) (rt *LoadCfg) {
-	rt = &LoadCfg{duration, goroutines, testUrl, reqBody, method, host, statsAggregator, timeoutms,
+	rt = &LoadCfg{duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
 		allowRedirects, disableCompression, disableKeepAlive, 0}
 	return
 }
@@ -90,7 +92,7 @@ func escapeUrlStr(in string) string {
 
 //DoRequest single request implementation. Returns the size of the response and its duration
 //On error - returns -1 on both
-func DoRequest(httpClient *http.Client, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
 
@@ -105,6 +107,10 @@ func DoRequest(httpClient *http.Client, method, host, loadUrl, reqBody string) (
 	if err != nil {
 		fmt.Println("An error occured doing request", err)
 		return
+	}
+
+	for hk, hv := range header {
+		req.Header.Add(hk, hv)
 	}
 
 	req.Header.Add("User-Agent", USER_AGENT)
@@ -173,7 +179,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := DoRequest(httpClient, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
+		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
