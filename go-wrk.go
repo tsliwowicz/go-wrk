@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/tsliwowicz/go-wrk/loader"
@@ -23,6 +24,8 @@ var goroutines int = 2
 var testUrl string
 var method string = "GET"
 var host string
+var headerStr string
+var header map[string]string
 var statsAggregator chan *loader.RequesterStats
 var timeoutms int
 var allowRedirectsFlag bool = false
@@ -41,7 +44,8 @@ func init() {
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
-	flag.StringVar(&host, "H", "", "Host Header")
+	flag.StringVar(&host, "host", "", "Host Header")
+	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
 	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
 }
@@ -65,6 +69,12 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt)
 
 	flag.Parse() // Scan the arguments list
+	header = make(map[string]string)
+	headerPairs := strings.Split(headerStr, ";")
+	for _, hdr := range headerPairs {
+		hp := strings.Split(hdr, ":")
+		header[hp[0]] = hp[1]
+	}
 
 	if playbackFile != "<empty>" {
 		file, err := os.Open(playbackFile) // For read access.
@@ -103,7 +113,7 @@ func main() {
 		reqBody = string(data)
 	}
 
-	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, statsAggregator, timeoutms,
+	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
 		allowRedirectsFlag, disableCompression, disableKeepAlive)
 
 	for i := 0; i < goroutines; i++ {
