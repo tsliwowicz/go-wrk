@@ -17,21 +17,25 @@ This will download and compile go-wrk. The binary will be placed under your $GOP
    
 Command line parameters (./go-wrk -help)  
 	
-    Usage: go-wrk <options> <url>  
-    Options:
-        -host    Host Header (Default )
-        -M    HTTP method (Default GET)
-        -T    Socket/request timeout in ms (Default 1000)
-        -H    Header line, joined with semicolon
-        -body    request body string or @filename (Default )
-        -c    Number of goroutines to use (concurrent connections) (Default 10)
-        -d    Duration of test in seconds (Default 10)
-        -f    Playback file name (Default <empty>)
-        -help    Print help (Default false)
-        -no-c    Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)
-        -no-ka    Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)
-        -redir    Allow Redirects (Default false)
-        -v    Print version details (Default false)
+       Usage: go-wrk <options> <url>
+       Options:
+        -H 	 header line, joined with ';' (Default )
+        -M 	 HTTP method (Default GET)
+        -T 	 Socket/request timeout in ms (Default 1000)
+        -body 	 request body string or @filename (Default )
+        -c 	 Number of goroutines to use (concurrent connections) (Default 10)
+        -ca 	 CA file to verify peer against (SSL/TLS) (Default )
+        -cert 	 CA certificate file to verify peer against (SSL/TLS) (Default )
+        -d 	 Duration of test in seconds (Default 10)
+        -f 	 Playback file name (Default <empty>)
+        -help 	 Print help (Default false)
+        -host 	 Host Header (Default )
+        -http 	 Use HTTP/2 (Default true)
+        -key 	 Private key file name (SSL/TLS (Default )
+        -no-c 	 Disable Compression - Prevents sending the "Accept-Encoding: gzip" header (Default false)
+        -no-ka 	 Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests (Default false)
+        -redir 	 Allow Redirects (Default false)
+        -v 	 Print version details (Default false)
 
 Basic Usage
 -----------
