@@ -171,23 +171,9 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
 
-	httpClient := &http.Client{}
-	//overriding the default parameters
-	httpClient.Transport = &http.Transport{
-		DisableCompression:    cfg.disableCompression,
-		DisableKeepAlives:     cfg.disableKeepAlive,
-		ResponseHeaderTimeout: time.Millisecond * time.Duration(cfg.timeoutms),
-	}
-
-	httpClient, err := client(httpClient, cfg.clientCert, cfg.clientKey, cfg.caCert, cfg.http2)
+	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.timeoutms, cfg.allowRedirects, cfg.clientCert, cfg.clientKey, cfg.caCert, cfg.http2)
 	if err != nil {
 		log.Fatal(err)
-	}
-	if !cfg.allowRedirects {
-		//returning an error when trying to redirect. This prevents the redirection from happening.
-		httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return util.NewRedirectError("redirection not allowed")
-		}
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
