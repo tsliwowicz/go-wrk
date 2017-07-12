@@ -33,6 +33,10 @@ var disableCompression bool
 var disableKeepAlive bool
 var playbackFile string
 var reqBody string
+var clientCert string
+var clientKey string
+var caCert string
+var http2 bool
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -48,6 +52,10 @@ func init() {
 	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
 	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
+	flag.StringVar(&clientCert, "cert", "", "CA certificate file to verify peer against (SSL/TLS)")
+	flag.StringVar(&clientKey, "key", "", "Private key file name (SSL/TLS")
+	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
+	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
 }
 
 //printDefaults a nicer format for the defaults
@@ -116,7 +124,7 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, clientCert, clientKey, caCert, http2)
 
 	for i := 0; i < goroutines; i++ {
 		go loadGen.RunSingleLoadSession()

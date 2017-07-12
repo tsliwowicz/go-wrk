@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -32,6 +33,10 @@ type LoadCfg struct {
 	disableCompression bool
 	disableKeepAlive   bool
 	interrupted        int32
+	clientCert         string
+	clientKey          string
+	caCert             string
+	http2              bool
 }
 
 // RequesterStats used for colelcting aggregate statistics
@@ -55,9 +60,13 @@ func NewLoadCfg(duration int, //seconds
 	timeoutms int,
 	allowRedirects bool,
 	disableCompression bool,
-	disableKeepAlive bool) (rt *LoadCfg) {
+	disableKeepAlive bool,
+	clientCert string,
+	clientKey string,
+	caCert string,
+	http2 bool) (rt *LoadCfg) {
 	rt = &LoadCfg{duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirects, disableCompression, disableKeepAlive, 0}
+		allowRedirects, disableCompression, disableKeepAlive, 0, clientCert, clientKey, caCert, http2}
 	return
 }
 
@@ -128,6 +137,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 			fmt.Println("An error occured doing request", err, rr)
 			return
 		}
+		fmt.Println("An error occured doing request", err)
 	}
 	if resp == nil {
 		fmt.Println("empty response")
@@ -160,22 +170,10 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 func (cfg *LoadCfg) RunSingleLoadSession() {
 	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
-	var httpClient *http.Client
 
-	if cfg.allowRedirects {
-		httpClient = &http.Client{}
-	} else {
-		//returning an error when trying to redirect. This prevents the redirection from happening.
-		httpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return util.NewRedirectError("redirection not allowed")
-		}}
-	}
-
-	//overriding the default parameters
-	httpClient.Transport = &http.Transport{
-		DisableCompression:    cfg.disableCompression,
-		DisableKeepAlives:     cfg.disableKeepAlive,
-		ResponseHeaderTimeout: time.Millisecond * time.Duration(cfg.timeoutms),
+	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.timeoutms, cfg.allowRedirects, cfg.clientCert, cfg.clientKey, cfg.caCert, cfg.http2)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
