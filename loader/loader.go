@@ -152,7 +152,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	if err != nil {
 		fmt.Println("An error occured reading body", err)
 	}
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
 		duration = time.Since(start)
 		respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
