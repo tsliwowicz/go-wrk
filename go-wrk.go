@@ -81,7 +81,7 @@ func main() {
 	if headerStr != "" {
 		headerPairs := strings.Split(headerStr, ";")
 		for _, hdr := range headerPairs {
-			hp := strings.Split(hdr, ":")
+			hp := strings.SplitN(hdr, ":", 2)
 			header[hp[0]] = hp[1]
 		}
 	}
