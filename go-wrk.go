@@ -152,9 +152,9 @@ func main() {
 		})
 
 		if err != nil {
-	        fmt.Println("Error collecting JSON files: ", err)
-	        os.Exit(1)
-	    }
+			fmt.Println("Error collecting JSON files: ", err)
+			os.Exit(1)
+		}
 
 		if len(files) == 0 {
 			fmt.Println("No JSON files in specified directory: ", fp)
