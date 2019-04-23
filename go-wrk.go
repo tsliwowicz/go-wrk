@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"math/rand"
+	"path/filepath"
 
 	"github.com/tsliwowicz/go-wrk/loader"
 	"github.com/tsliwowicz/go-wrk/util"
@@ -51,7 +53,7 @@ func init() {
 	flag.StringVar(&host, "host", "", "Host Header")
 	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
-	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
+	flag.StringVar(&reqBody, "body", "", "Request body string, or @filename, #folder")
 	flag.StringVar(&clientCert, "cert", "", "CA certificate file to verify peer against (SSL/TLS)")
 	flag.StringVar(&clientKey, "key", "", "Private key file name (SSL/TLS")
 	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
@@ -111,8 +113,9 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
-
+	// whether we're loading json from files
+	var files []string
+	var fp string
 	if len(reqBody) > 0 && reqBody[0] == '@' {
 		bodyFilename := reqBody[1:]
 		data, err := ioutil.ReadFile(bodyFilename)
@@ -121,12 +124,65 @@ func main() {
 			os.Exit(1)
 		}
 		reqBody = string(data)
+	} else if len(reqBody) > 0 && reqBody[0] == '#' {
+		var filesPath string
+		fmt.Println(filesPath) // need this otherwise it complains it's not being used
+		// whether the first character is an absolute path
+		if reqBody[1] == '/' {
+			// it's already an absolute path, remove the '$'
+			filesPath = reqBody[1:]
+		} else {
+			// make it an absolute path
+			filesPath, err := os.Getwd()
+			if err != nil {
+				fmt.Println("Error getting working directory: ", err)
+				os.Exit(1)
+			}
+			filesPath = filesPath + "/" + reqBody[1:]
+			// why does filesPath lose value outside of the else?
+			fp = filesPath
+		}
+
+		err := filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
+			// only add the file if there's a path and it's a .json file
+			if strings.Contains(path, ".json") {
+				files = append(files, path)
+			}
+			return nil
+		})
+
+		if err != nil {
+	        fmt.Println("Error collecting JSON files: ", err)
+	        os.Exit(1)
+	    }
+
+		if len(files) == 0 {
+			fmt.Println("No JSON files in specified directory: ", fp)
+			os.Exit(1)
+		}
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
 		allowRedirectsFlag, disableCompression, disableKeepAlive, clientCert, clientKey, caCert, http2)
 
+	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
 	for i := 0; i < goroutines; i++ {
+		// if we're loading random files, update the request body
+		if len(files) > 0 {
+			// first item in the `files` array is the directory
+			newReqBody, err := getRandomJSON(files)
+			if err != nil {
+				fmt.Println("Error getting random JSON: ", err)
+				// continue to next goroutine
+				continue
+			}
+			// overwrite loadGen with a new loadGen
+			loadGen = loader.NewLoadCfg(
+				duration, goroutines, testUrl, newReqBody, method, host,
+				header, statsAggregator, timeoutms, allowRedirectsFlag,
+				disableCompression, disableKeepAlive, clientCert, clientKey,
+				caCert, http2)
+		}
 		go loadGen.RunSingleLoadSession()
 	}
 
@@ -165,4 +221,18 @@ func main() {
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
 
+}
+
+// take a list of file paths of JSON files and return a string
+func getRandomJSON(files []string) (string, error) {
+
+	// 0 <= file_number < files_length
+	bodyFilename := files[rand.Intn(len(files))]
+	data, err := ioutil.ReadFile(bodyFilename)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Could not read file %q: %v", bodyFilename, err))
+		return "", err
+	}
+
+	return string(data), nil
 }
