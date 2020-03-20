@@ -31,6 +31,7 @@ var timeoutms int
 var allowRedirectsFlag bool = false
 var disableCompression bool
 var disableKeepAlive bool
+var skipVerify bool
 var playbackFile string
 var reqBody string
 var clientCert string
@@ -44,6 +45,7 @@ func init() {
 	flag.BoolVar(&helpFlag, "help", false, "Print help")
 	flag.BoolVar(&disableCompression, "no-c", false, "Disable Compression - Prevents sending the \"Accept-Encoding: gzip\" header")
 	flag.BoolVar(&disableKeepAlive, "no-ka", false, "Disable KeepAlive - prevents re-use of TCP connections between different HTTP requests")
+	flag.BoolVar(&skipVerify, "no-vr", false, "Skip verifying SSL certificate of the server")
 	flag.IntVar(&goroutines, "c", 10, "Number of goroutines to use (concurrent connections)")
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
@@ -124,7 +126,7 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive, clientCert, clientKey, caCert, http2)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2)
 
 	for i := 0; i < goroutines; i++ {
 		go loadGen.RunSingleLoadSession()

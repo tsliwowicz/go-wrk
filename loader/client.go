@@ -13,7 +13,7 @@ import (
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
-func client(disableCompression bool, disableKeepAlive bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool) (*http.Client, error) {
+func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool) (*http.Client, error) {
 
 	client := &http.Client{}
 	//overriding the default parameters
@@ -21,6 +21,7 @@ func client(disableCompression bool, disableKeepAlive bool, timeoutms int, allow
 		DisableCompression:    disableCompression,
 		DisableKeepAlives:     disableKeepAlive,
 		ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms),
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: skipVerify},
 	}
 
 	if !allowRedirects {
@@ -56,8 +57,9 @@ func client(disableCompression bool, disableKeepAlive bool, timeoutms int, allow
 	clientCertPool.AppendCertsFromPEM(clientCACert)
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      clientCertPool,
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            clientCertPool,
+		InsecureSkipVerify: skipVerify,
 	}
 
 	tlsConfig.BuildNameToCertificate()
