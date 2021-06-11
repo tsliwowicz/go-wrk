@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tsliwowicz/go-wrk/loader"
-	"github.com/tsliwowicz/go-wrk/util"
+	"./loader"
+	"./util"
 )
 
-const APP_VERSION = "0.1"
+const APP_VERSION = "0.2"
 
 //default that can be overridden from the command line
 var versionFlag bool = false
@@ -24,7 +24,7 @@ var goroutines int = 2
 var testUrl string
 var method string = "GET"
 var host string
-var headerStr string
+var headerFlags util.HeaderList
 var header map[string]string
 var statsAggregator chan *loader.RequesterStats
 var timeoutms int
@@ -49,7 +49,7 @@ func init() {
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
 	flag.StringVar(&host, "host", "", "Host Header")
-	flag.StringVar(&headerStr, "H", "", "header line, joined with ';'")
+	flag.Var(&headerFlags, "H", "Header to add to each request (you can define multiple -H flags)")
 	flag.StringVar(&playbackFile, "f", "<empty>", "Playback file name")
 	flag.StringVar(&reqBody, "body", "", "request body string or @filename")
 	flag.StringVar(&clientCert, "cert", "", "CA certificate file to verify peer against (SSL/TLS)")
@@ -78,13 +78,12 @@ func main() {
 
 	flag.Parse() // Scan the arguments list
 	header = make(map[string]string)
-	if headerStr != "" {
-		headerPairs := strings.Split(headerStr, ";")
-		for _, hdr := range headerPairs {
+	if headerFlags != nil {
+		for _, hdr := range headerFlags {
 			hp := strings.SplitN(hdr, ":", 2)
 			header[hp[0]] = hp[1]
 		}
-	}
+    }
 
 	if playbackFile != "<empty>" {
 		file, err := os.Open(playbackFile) // For read access.
