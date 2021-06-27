@@ -1,12 +1,10 @@
 go-wrk - an HTTP benchmarking tool
 ==================================
 
-This is a fork of the wonderful https://github.com/tsliwowicz/go-wrk I did not create the code, only added a single new feature (better header parsing) https://github.com/tsliwowicz/go-wrk/pull/19 Use at your own risk.
-
 Building
 --------
 
-    go get github.com/elodani/go-wrk
+    go get github.com/tsliwowicz/go-wrk
 
 This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory
 
@@ -14,7 +12,7 @@ Command line parameters (./go-wrk -help)
 
        Usage: go-wrk <options> <url>
        Options:
-        -H 	 Request header (Default )
+        -H   Header to add to each request (you can define multiple -H flags) (Default )
         -M 	 HTTP method (Default GET)
         -T 	 Socket/request timeout in ms (Default 1000)
         -body 	 request body string or @filename (Default )
