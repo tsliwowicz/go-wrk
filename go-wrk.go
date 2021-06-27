@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"./loader"
-	"./util"
+	"github.com/tsliwowicz/go-wrk/loader"
+	"github.com/tsliwowicz/go-wrk/util"
 )
 
 const APP_VERSION = "0.2"
@@ -83,7 +83,7 @@ func main() {
 			hp := strings.SplitN(hdr, ":", 2)
 			header[hp[0]] = hp[1]
 		}
-    }
+	}
 
 	if playbackFile != "<empty>" {
 		file, err := os.Open(playbackFile) // For read access.
