@@ -165,5 +165,4 @@ func main() {
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
-
 }
