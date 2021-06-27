@@ -3,8 +3,25 @@ package util
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
+
+type HeaderList []string
+
+func (i *HeaderList) String() string {
+	out := []string{}
+    for _, s := range *i {
+        out = append(out, s)
+    }
+    return strings.Join(out, ", ")
+}
+
+func (i *HeaderList) Set(value string) error {
+    *i = append(*i, value)
+    return nil
+}
+
 
 // RedirectError specific error type that happens on redirection
 type RedirectError struct {
