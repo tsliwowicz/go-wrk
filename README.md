@@ -11,9 +11,9 @@ The majority of go-wrk is the product of one afternoon, and its quality is compa
 Building
 --------
 
-    go get github.com/tsliwowicz/go-wrk
+    go install github.com/tsliwowicz/go-wrk@latest
 
-This will download and compile go-wrk. The binary will be placed under your $GOPATH/bin directory  
+This will download and compile go-wrk. 
    
 Command line parameters (./go-wrk -help)  
 	
