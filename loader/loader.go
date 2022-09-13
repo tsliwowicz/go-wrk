@@ -20,7 +20,7 @@ const (
 )
 
 type LoadCfg struct {
-	duration           int //seconds
+	duration           int // seconds
 	goroutines         int
 	testUrl            string
 	reqBody            string
@@ -32,7 +32,7 @@ type LoadCfg struct {
 	allowRedirects     bool
 	disableCompression bool
 	disableKeepAlive   bool
-	skipVerify	 	   bool
+	skipVerify         bool
 	interrupted        int32
 	clientCert         string
 	clientKey          string
@@ -50,7 +50,7 @@ type RequesterStats struct {
 	NumErrs        int
 }
 
-func NewLoadCfg(duration int, //seconds
+func NewLoadCfg(duration int, // seconds
 	goroutines int,
 	testUrl string,
 	reqBody string,
@@ -101,8 +101,8 @@ func escapeUrlStr(in string) string {
 	}
 }
 
-//DoRequest single request implementation. Returns the size of the response and its duration
-//On error - returns -1 on both
+// DoRequest single request implementation. Returns the size of the response and its duration
+// On error - returns -1 on both
 func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
 	respSize = -1
 	duration = -1
@@ -132,8 +132,8 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		fmt.Println("redirect?")
-		//this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
-		//between an invalid URL that was provided and and redirection error.
+		// this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
+		// between an invalid URL that was provided and and redirection error.
 		rr, ok := err.(*url.Error)
 		if !ok {
 			fmt.Println("An error occured doing request", err, rr)
@@ -154,7 +154,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	if err != nil {
 		fmt.Println("An error occured reading body", err)
 	}
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
+	if resp.StatusCode/100 == 2 { // Treat all 2XX as successful
 		duration = time.Since(start)
 		respSize = len(body) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else if resp.StatusCode == http.StatusMovedPermanently || resp.StatusCode == http.StatusTemporaryRedirect {
@@ -167,13 +167,13 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	return
 }
 
-//Requester a go function for repeatedly making requests and aggregating statistics as long as required
-//When it is done, it sends the results using the statsAggregator channel
+// Requester a go function for repeatedly making requests and aggregating statistics as long as required
+// When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
 	stats := &RequesterStats{MinRequestTime: time.Minute}
 	start := time.Now()
 
-	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify, 
+	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
 		cfg.timeoutms, cfg.allowRedirects, cfg.clientCert, cfg.clientKey, cfg.caCert, cfg.http2)
 	if err != nil {
 		log.Fatal(err)
