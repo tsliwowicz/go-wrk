@@ -14,7 +14,7 @@ import (
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
-const APP_VERSION = "0.9"
+const APP_VERSION = "0.10"
 
 //default that can be overridden from the command line
 var versionFlag bool = false
