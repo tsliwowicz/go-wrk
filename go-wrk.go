@@ -147,6 +147,9 @@ func main() {
 			aggStats.MaxRequestTime = util.MaxDuration(aggStats.MaxRequestTime, stats.MaxRequestTime)
 			aggStats.MinRequestTime = util.MinDuration(aggStats.MinRequestTime, stats.MinRequestTime)
 			responders++
+			for k,v := range stats.ErrMap {
+				aggStats.ErrMap[k] += v
+			}
 		}
 	}
 
@@ -165,4 +168,5 @@ func main() {
 	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
 	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
+	fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
 }

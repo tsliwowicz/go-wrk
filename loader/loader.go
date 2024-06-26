@@ -2,6 +2,7 @@ package loader
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,6 +49,7 @@ type RequesterStats struct {
 	MaxRequestTime time.Duration
 	NumRequests    int
 	NumErrs        int
+	ErrMap		   map[error]int
 }
 
 func NewLoadCfg(duration int, // seconds
@@ -103,7 +105,7 @@ func escapeUrlStr(in string) string {
 
 // DoRequest single request implementation. Returns the size of the response and its duration
 // On error - returns -1 on both
-func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration, err error) {
 	respSize = -1
 	duration = -1
 
@@ -116,8 +118,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 
 	req, err := http.NewRequest(method, loadUrl, buf)
 	if err != nil {
-		fmt.Println("An error occured doing request", err)
-		return
+		return 0,0,err
 	}
 
 	for hk, hv := range header {
@@ -131,19 +132,16 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Println("redirect?")
 		// this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
 		// between an invalid URL that was provided and and redirection error.
-		rr, ok := err.(*url.Error)
+		_, ok := err.(*url.Error)
 		if !ok {
-			fmt.Println("An error occured doing request", err, rr)
-			return
+			return 0,0,err
 		}
-		fmt.Println("An error occured doing request", err)
+		return 0,0,err
 	}
 	if resp == nil {
-		fmt.Println("empty response")
-		return
+		return 0,0,errors.New("empty response")
 	}
 	defer func() {
 		if resp != nil && resp.Body != nil {
@@ -152,7 +150,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("An error occured reading body", err)
+		return 0,0,err
 	}
 	if resp.StatusCode/100 == 2 { // Treat all 2XX as successful
 		duration = time.Since(start)
@@ -161,7 +159,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 		duration = time.Since(start)
 		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else {
-		fmt.Println("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req)
+		return 0,0,errors.New(fmt.Sprint("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req))
 	}
 
 	return
@@ -180,8 +178,11 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
-		if respSize > 0 {
+		respSize, reqDur, err := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
+		if err != nil {
+			stats.ErrMap[err]+=1
+			stats.NumErrs++
+		} else if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
 			stats.MaxRequestTime = util.MaxDuration(reqDur, stats.MaxRequestTime)
