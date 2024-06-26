@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -148,7 +147,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 			resp.Body.Close()
 		}
 	}()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return 0,0,err
 	}
@@ -163,6 +162,13 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	}
 
 	return
+}
+
+func unwrap(err error) error {
+	for errors.Unwrap(err)!=nil {
+		err = errors.Unwrap(err);
+	}
+	return err
 }
 
 // Requester a go function for repeatedly making requests and aggregating statistics as long as required
@@ -180,7 +186,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur, err := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if err != nil {
-			stats.ErrMap[err]+=1
+			stats.ErrMap[unwrap(err)]+=1
 			stats.NumErrs++
 		} else if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
