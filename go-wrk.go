@@ -132,7 +132,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{MinRequestTime: time.Minute}
+	aggStats := loader.RequesterStats{MinRequestTime: time.Minute, ErrMap: make(map[error]int)}
 
 	for responders < goroutines {
 		select {

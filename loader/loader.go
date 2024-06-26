@@ -168,7 +168,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 // Requester a go function for repeatedly making requests and aggregating statistics as long as required
 // When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
-	stats := &RequesterStats{MinRequestTime: time.Minute}
+	stats := &RequesterStats{MinRequestTime: time.Minute, ErrMap: make(map[error]int)}
 	start := time.Now()
 
 	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
