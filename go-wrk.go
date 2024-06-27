@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"time"
 
@@ -70,9 +69,6 @@ func printDefaults() {
 }
 
 func main() {
-	//raising the limits. Some performance gains were achieved with the + goroutines (not a lot).
-	runtime.GOMAXPROCS(runtime.NumCPU() + goroutines)
-
 	statsAggregator = make(chan *loader.RequesterStats, goroutines)
 	sigChan := make(chan os.Signal, 1)
 
