@@ -72,6 +72,14 @@ func printDefaults() {
 	})
 }
 
+func mapToString(m map[string]int) string {
+	s := make([]string,0,len(m))
+	for k,v := range m {
+		s = append(s,fmt.Sprint(k,"=",v))
+	}
+	return strings.Join(s,",")
+}
+
 func main() {
 
 	statsAggregator = make(chan *loader.RequesterStats, goroutines)
@@ -160,7 +168,7 @@ func main() {
 	if aggStats.NumRequests == 0 {
 		fmt.Println("Error: No statistics collected / no requests found\n")
 		fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
-		fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
+		fmt.Printf("Error Counts:\t\t%v\n", mapToString(aggStats.ErrMap))
 			return
 	}
 
@@ -174,7 +182,7 @@ func main() {
 	fmt.Printf("Avg Req Time:\t\t%v\n", toDuration(int64(aggStats.Histogram.Mean())))
 	fmt.Printf("Slowest Request:\t%v\n", toDuration(aggStats.Histogram.Max()))
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
-	fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
+	fmt.Printf("Error Counts:\t\t%v\n", mapToString(aggStats.ErrMap))
 	fmt.Printf("10%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.10)))
 	fmt.Printf("50%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.50)))
 	fmt.Printf("75%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.75)))
