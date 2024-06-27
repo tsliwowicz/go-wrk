@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	histo "github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
@@ -44,11 +45,10 @@ type LoadCfg struct {
 type RequesterStats struct {
 	TotRespSize    int64
 	TotDuration    time.Duration
-	MinRequestTime time.Duration
-	MaxRequestTime time.Duration
 	NumRequests    int
 	NumErrs        int
 	ErrMap		   map[error]int
+	Histogram	   *histo.Histogram
 }
 
 func NewLoadCfg(duration int, // seconds
@@ -174,7 +174,7 @@ func unwrap(err error) error {
 // Requester a go function for repeatedly making requests and aggregating statistics as long as required
 // When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
-	stats := &RequesterStats{MinRequestTime: time.Minute, ErrMap: make(map[error]int)}
+	stats := &RequesterStats{ErrMap: make(map[error]int), Histogram: histo.New(1,int64(cfg.duration * 1000000),4)}
 	start := time.Now()
 
 	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
@@ -191,8 +191,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 		} else if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
-			stats.MaxRequestTime = util.MaxDuration(reqDur, stats.MaxRequestTime)
-			stats.MinRequestTime = util.MinDuration(reqDur, stats.MinRequestTime)
+			stats.Histogram.RecordValue(reqDur.Microseconds());
 			stats.NumRequests++
 		} else {
 			stats.NumErrs++

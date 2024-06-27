@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	histo "github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/tsliwowicz/go-wrk/loader"
 	"github.com/tsliwowicz/go-wrk/util"
 )
@@ -128,7 +129,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{MinRequestTime: time.Minute, ErrMap: make(map[error]int)}
+	aggStats := loader.RequesterStats{ErrMap: make(map[error]int), Histogram: histo.New(1,int64(duration * 1000000),4)}
 
 	for responders < goroutines {
 		select {
@@ -140,12 +141,11 @@ func main() {
 			aggStats.NumRequests += stats.NumRequests
 			aggStats.TotRespSize += stats.TotRespSize
 			aggStats.TotDuration += stats.TotDuration
-			aggStats.MaxRequestTime = util.MaxDuration(aggStats.MaxRequestTime, stats.MaxRequestTime)
-			aggStats.MinRequestTime = util.MinDuration(aggStats.MinRequestTime, stats.MinRequestTime)
 			responders++
 			for k,v := range stats.ErrMap {
 				aggStats.ErrMap[k] += v
 			}
+			aggStats.Histogram.Merge(stats.Histogram)
 		}
 	}
 
@@ -161,8 +161,21 @@ func main() {
 	bytesRate := float64(aggStats.TotRespSize) / avgThreadDur.Seconds()
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, avgThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
 	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
-	fmt.Printf("Fastest Request:\t%v\n", aggStats.MinRequestTime)
-	fmt.Printf("Slowest Request:\t%v\n", aggStats.MaxRequestTime)
+	fmt.Printf("Fastest Request:\t%v\n", toDuration(aggStats.Histogram.Min()))
+	fmt.Printf("Slowest Request:\t%v\n", toDuration(aggStats.Histogram.Max()))
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
 	fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
+	fmt.Printf("10%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.10)))
+	fmt.Printf("50%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.50)))
+	fmt.Printf("75%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.75)))
+	fmt.Printf("99%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.99)))
+	fmt.Printf("99.9%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.999)))
+	fmt.Printf("99.9999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.999999)))
+	fmt.Printf("99.99999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.9999999)))
+	fmt.Printf("stddev:\t\t\t%v\n", toDuration(int64(aggStats.Histogram.StdDev())))
+	// aggStats.Histogram.PercentilesPrint(os.Stdout,1,1)
+}
+
+func toDuration(usecs int64) time.Duration {
+	return time.Duration(usecs*1000)
 }
