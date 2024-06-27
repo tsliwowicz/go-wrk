@@ -137,7 +137,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{ErrMap: make(map[error]int), Histogram: histo.New(1,int64(duration * 1000000),4)}
+	aggStats := loader.RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1,int64(duration * 1000000),4)}
 
 	for responders < goroutines {
 		select {
@@ -159,7 +159,9 @@ func main() {
 
 	if aggStats.NumRequests == 0 {
 		fmt.Println("Error: No statistics collected / no requests found\n")
-		return
+		fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
+		fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
+			return
 	}
 
 	avgThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration

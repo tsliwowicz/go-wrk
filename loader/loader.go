@@ -47,7 +47,7 @@ type RequesterStats struct {
 	TotDuration    time.Duration
 	NumRequests    int
 	NumErrs        int
-	ErrMap		   map[error]int
+	ErrMap		   map[string]int
 	Histogram	   *histo.Histogram
 }
 
@@ -158,7 +158,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 		duration = time.Since(start)
 		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else {
-		return 0,0,errors.New(fmt.Sprint("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req))
+		return 0,0,errors.New(fmt.Sprint("received status code ", resp.StatusCode))
 	}
 
 	return
@@ -174,7 +174,7 @@ func unwrap(err error) error {
 // Requester a go function for repeatedly making requests and aggregating statistics as long as required
 // When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
-	stats := &RequesterStats{ErrMap: make(map[error]int), Histogram: histo.New(1,int64(cfg.duration * 1000000),4)}
+	stats := &RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1,int64(cfg.duration * 1000000),4)}
 	start := time.Now()
 
 	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
@@ -186,7 +186,7 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
 		respSize, reqDur, err := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
 		if err != nil {
-			stats.ErrMap[unwrap(err)]+=1
+			stats.ErrMap[unwrap(err).Error()]+=1
 			stats.NumErrs++
 		} else if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
