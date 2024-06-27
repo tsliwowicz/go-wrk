@@ -157,11 +157,11 @@ func main() {
 	avgThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
 
 	reqRate := float64(aggStats.NumRequests) / avgThreadDur.Seconds()
-	avgReqTime := aggStats.TotDuration / time.Duration(aggStats.NumRequests)
 	bytesRate := float64(aggStats.TotRespSize) / avgThreadDur.Seconds()
 	fmt.Printf("%v requests in %v, %v read\n", aggStats.NumRequests, avgThreadDur, util.ByteSize{float64(aggStats.TotRespSize)})
-	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\nAvg Req Time:\t\t%v\n", reqRate, util.ByteSize{bytesRate}, avgReqTime)
+	fmt.Printf("Requests/sec:\t\t%.2f\nTransfer/sec:\t\t%v\n", reqRate, util.ByteSize{bytesRate})
 	fmt.Printf("Fastest Request:\t%v\n", toDuration(aggStats.Histogram.Min()))
+	fmt.Printf("Avg Req Time:\t\t%v\n", toDuration(int64(aggStats.Histogram.Mean())))
 	fmt.Printf("Slowest Request:\t%v\n", toDuration(aggStats.Histogram.Max()))
 	fmt.Printf("Number of Errors:\t%v\n", aggStats.NumErrs)
 	fmt.Printf("Error Counts:\t\t%v\n", aggStats.ErrMap)
