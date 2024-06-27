@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ var clientCert string
 var clientKey string
 var caCert string
 var http2 bool
+var cpus int = 0
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -49,6 +51,7 @@ func init() {
 	flag.IntVar(&goroutines, "c", 10, "Number of goroutines to use (concurrent connections)")
 	flag.IntVar(&duration, "d", 10, "Duration of test in seconds")
 	flag.IntVar(&timeoutms, "T", 1000, "Socket/request timeout in ms")
+	flag.IntVar(&cpus, "cpus", 0, "Number of cpus, i.e. GOMAXPROCS. 0 = system default.")
 	flag.StringVar(&method, "M", "GET", "HTTP method")
 	flag.StringVar(&host, "host", "", "Host Header")
 	flag.Var(&headerFlags, "H", "Header to add to each request (you can define multiple -H flags)")
@@ -70,6 +73,7 @@ func printDefaults() {
 }
 
 func main() {
+
 	statsAggregator = make(chan *loader.RequesterStats, goroutines)
 	sigChan := make(chan os.Signal, 1)
 
@@ -107,6 +111,10 @@ func main() {
 	} else if helpFlag || len(testUrl) == 0 {
 		printDefaults()
 		return
+	}
+
+	if cpus > 0 {
+		runtime.GOMAXPROCS(cpus)
 	}
 
 	fmt.Printf("Running %vs test @ %v\n  %v goroutine(s) running concurrently\n", duration, testUrl, goroutines)
