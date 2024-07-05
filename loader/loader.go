@@ -41,7 +41,7 @@ type LoadCfg struct {
 	http2              bool
 }
 
-// RequesterStats used for colelcting aggregate statistics
+// RequesterStats used for collecting aggregate statistics
 type RequesterStats struct {
 	TotRespSize    int64
 	TotDuration    time.Duration
