@@ -2,9 +2,9 @@ package loader
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	histo "github.com/HdrHistogram/hdrhistogram-go"
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
@@ -40,14 +41,14 @@ type LoadCfg struct {
 	http2              bool
 }
 
-// RequesterStats used for colelcting aggregate statistics
+// RequesterStats used for collecting aggregate statistics
 type RequesterStats struct {
 	TotRespSize    int64
 	TotDuration    time.Duration
-	MinRequestTime time.Duration
-	MaxRequestTime time.Duration
 	NumRequests    int
 	NumErrs        int
+	ErrMap		   map[string]int
+	Histogram	   *histo.Histogram
 }
 
 func NewLoadCfg(duration int, // seconds
@@ -103,7 +104,7 @@ func escapeUrlStr(in string) string {
 
 // DoRequest single request implementation. Returns the size of the response and its duration
 // On error - returns -1 on both
-func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration) {
+func DoRequest(httpClient *http.Client, header map[string]string, method, host, loadUrl, reqBody string) (respSize int, duration time.Duration, err error) {
 	respSize = -1
 	duration = -1
 
@@ -116,8 +117,7 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 
 	req, err := http.NewRequest(method, loadUrl, buf)
 	if err != nil {
-		fmt.Println("An error occured doing request", err)
-		return
+		return 0,0,err
 	}
 
 	for hk, hv := range header {
@@ -131,28 +131,25 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 	start := time.Now()
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Println("redirect?")
 		// this is a bit weird. When redirection is prevented, a url.Error is retuned. This creates an issue to distinguish
 		// between an invalid URL that was provided and and redirection error.
-		rr, ok := err.(*url.Error)
+		_, ok := err.(*url.Error)
 		if !ok {
-			fmt.Println("An error occured doing request", err, rr)
-			return
+			return 0,0,err
 		}
-		fmt.Println("An error occured doing request", err)
+		return 0,0,err
 	}
 	if resp == nil {
-		fmt.Println("empty response")
-		return
+		return 0,0,errors.New("empty response")
 	}
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			resp.Body.Close()
 		}
 	}()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("An error occured reading body", err)
+		return 0,0,err
 	}
 	if resp.StatusCode/100 == 2 { // Treat all 2XX as successful
 		duration = time.Since(start)
@@ -161,16 +158,23 @@ func DoRequest(httpClient *http.Client, header map[string]string, method, host, 
 		duration = time.Since(start)
 		respSize = int(resp.ContentLength) + int(util.EstimateHttpHeadersSize(resp.Header))
 	} else {
-		fmt.Println("received status code", resp.StatusCode, "from", resp.Header, "content", string(body), req)
+		return 0,0,errors.New(fmt.Sprint("received status code ", resp.StatusCode))
 	}
 
 	return
 }
 
+func unwrap(err error) error {
+	for errors.Unwrap(err)!=nil {
+		err = errors.Unwrap(err);
+	}
+	return err
+}
+
 // Requester a go function for repeatedly making requests and aggregating statistics as long as required
 // When it is done, it sends the results using the statsAggregator channel
 func (cfg *LoadCfg) RunSingleLoadSession() {
-	stats := &RequesterStats{MinRequestTime: time.Minute}
+	stats := &RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1,int64(cfg.duration * 1000000),4)}
 	start := time.Now()
 
 	httpClient, err := client(cfg.disableCompression, cfg.disableKeepAlive, cfg.skipVerify,
@@ -180,12 +184,14 @@ func (cfg *LoadCfg) RunSingleLoadSession() {
 	}
 
 	for time.Since(start).Seconds() <= float64(cfg.duration) && atomic.LoadInt32(&cfg.interrupted) == 0 {
-		respSize, reqDur := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
-		if respSize > 0 {
+		respSize, reqDur, err := DoRequest(httpClient, cfg.header, cfg.method, cfg.host, cfg.testUrl, cfg.reqBody)
+		if err != nil {
+			stats.ErrMap[unwrap(err).Error()]+=1
+			stats.NumErrs++
+		} else if respSize > 0 {
 			stats.TotRespSize += int64(respSize)
 			stats.TotDuration += reqDur
-			stats.MaxRequestTime = util.MaxDuration(reqDur, stats.MaxRequestTime)
-			stats.MinRequestTime = util.MinDuration(reqDur, stats.MinRequestTime)
+			stats.Histogram.RecordValue(reqDur.Microseconds());
 			stats.NumRequests++
 		} else {
 			stats.NumErrs++

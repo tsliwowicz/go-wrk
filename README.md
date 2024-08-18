@@ -41,21 +41,30 @@ Command line parameters (./go-wrk -help)
 Basic Usage
 -----------
 
-    ./go-wrk -c 80 -d 5  http://192.168.1.118:8080/json
+    ./go-wrk -c 2048 -d 10 http://localhost:8080/plaintext
 
-This runs a benchmark for 5 seconds, using 80 go routines (connections)
+This runs a benchmark for 10 seconds, using 2048 go routines (connections)
 
 Output:
 
-    Running 10s test @ http://192.168.1.118:8080/json
-      80 goroutine(s) running concurrently
-       142470 requests in 4.949028953s, 19.57MB read
-         Requests/sec:		28787.47
-         Transfer/sec:		3.95MB
-         Avg Req Time:		0.0347ms
-         Fastest Request:	0.0340ms
-         Slowest Request:	0.0421ms
-         Number of Errors:	0
+    Running 10s test @ http://localhost:8080/plaintext
+        2048 goroutine(s) running concurrently
+    439977 requests in 10.012950719s, 52.45MB read
+    Requests/sec:		43940.79
+    Transfer/sec:		5.24MB
+    Fastest Request:	98µs
+    Avg Req Time:		46.608ms
+    Slowest Request:	398.431ms
+    Number of Errors:	0
+    Error Counts:		map[]
+    10%:			    164µs
+    50%:			    2.382ms
+    75%:			    3.83ms
+    99%:			    5.403ms
+    99.9%:			    5.488ms
+    99.9999%:		    5.5ms
+    99.99999%:		    5.5ms
+    stddev:			    29.744ms
 
 
 Benchmarking Tips
