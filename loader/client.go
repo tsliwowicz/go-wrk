@@ -5,33 +5,41 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"fmt"
 
+	"github.com/tsliwowicz/go-wrk/util"
 	"golang.org/x/net/http2"
 	"time"
-	"github.com/tsliwowicz/go-wrk/util"
 )
 
-func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool) (*http.Client, error) {
+func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool, proxy string) (*http.Client, error) {
 
 	client := &http.Client{}
-	//overriding the default parameters
-	client.Transport = &http.Transport{
+	transport := &http.Transport{
 		DisableCompression:    disableCompression,
 		DisableKeepAlives:     disableKeepAlive,
 		ResponseHeaderTimeout: time.Millisecond * time.Duration(timeoutms),
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: skipVerify},
 	}
 
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid proxy URL: %v", err)
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+
 	if !allowRedirects {
-		//returning an error when trying to redirect. This prevents the redirection from happening.
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return util.NewRedirectError("redirection not allowed")
 		}
 	}
 
 	if clientCert == "" && clientKey == "" && caCert == "" {
+		client.Transport = transport
 		return client, nil
 	}
 
@@ -63,13 +71,12 @@ func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int
 	}
 
 	tlsConfig.BuildNameToCertificate()
-	t := &http.Transport{
-		TLSClientConfig: tlsConfig,
-	}
+	transport.TLSClientConfig = tlsConfig
 
 	if usehttp2 {
-		http2.ConfigureTransport(t)
+		http2.ConfigureTransport(transport)
 	}
-	client.Transport = t
+
+	client.Transport = transport
 	return client, nil
 }
