@@ -15,7 +15,29 @@ Building
 
 This will download and compile go-wrk. 
    
-Command line parameters (./go-wrk -help)  
+Docker
+------
+
+An official container image is published as `ghcr.io/tsliwowicz/go-wrk`. Run it with the same flags you would pass to the binary:
+
+```
+docker run --rm ghcr.io/tsliwowicz/go-wrk -c 256 -d 30 http://host.docker.internal:8080/plaintext
+```
+
+Use `host.docker.internal` (Mac/Windows) or your host IP (Linux) when benchmarking services on the same machine, and mount local files if you need to reference request bodies or playback files:
+
+```
+docker run --rm -v "$PWD/scripts:/scripts" ghcr.io/tsliwowicz/go-wrk -f /scripts/playback.json https://example.com
+```
+
+For an interactive shell inside the image, override the entrypoint:
+
+```
+docker run -it --rm --entrypoint /bin/sh ghcr.io/tsliwowicz/go-wrk
+```
+
+Command line parameters (./go-wrk -help)
+---  
 	
        Usage: go-wrk <options> <url>
        Options:
