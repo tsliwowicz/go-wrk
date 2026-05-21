@@ -17,7 +17,7 @@ import (
 
 const APP_VERSION = "0.10"
 
-//default that can be overridden from the command line
+// default that can be overridden from the command line
 var versionFlag bool = false
 var helpFlag bool = false
 var duration int = 10 //seconds
@@ -63,7 +63,7 @@ func init() {
 	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
 }
 
-//printDefaults a nicer format for the defaults
+// printDefaults a nicer format for the defaults
 func printDefaults() {
 	fmt.Println("Usage: go-wrk <options> <url>")
 	fmt.Println("Options:")
@@ -73,11 +73,11 @@ func printDefaults() {
 }
 
 func mapToString(m map[string]int) string {
-	s := make([]string,0,len(m))
-	for k,v := range m {
-		s = append(s,fmt.Sprint(k,"=",v))
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		s = append(s, fmt.Sprint(k, "=", v))
 	}
-	return strings.Join(s,",")
+	return strings.Join(s, ",")
 }
 
 func main() {
@@ -147,7 +147,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1,int64(duration * 1000000),4)}
+	aggStats := loader.RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1, int64(duration*1000000), 4)}
 
 	for responders < goroutines {
 		select {
@@ -160,7 +160,7 @@ func main() {
 			aggStats.TotRespSize += stats.TotRespSize
 			aggStats.TotDuration += stats.TotDuration
 			responders++
-			for k,v := range stats.ErrMap {
+			for k, v := range stats.ErrMap {
 				aggStats.ErrMap[k] += v
 			}
 			aggStats.Histogram.Merge(stats.Histogram)
@@ -196,17 +196,17 @@ func main() {
 	if aggStats.NumErrs > 0 {
 		fmt.Printf("Error Counts:\t\t%v\n", mapToString(aggStats.ErrMap))
 	}
-	fmt.Printf("10%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.10)))
-	fmt.Printf("50%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.50)))
-	fmt.Printf("75%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.75)))
-	fmt.Printf("99%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.99)))
-	fmt.Printf("99.9%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.999)))
-	fmt.Printf("99.9999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.999999)))
-	fmt.Printf("99.99999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(.9999999)))
+	fmt.Printf("10%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(10)))
+	fmt.Printf("50%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(50)))
+	fmt.Printf("75%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(75)))
+	fmt.Printf("99%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(99)))
+	fmt.Printf("99.9%%:\t\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(99.9)))
+	fmt.Printf("99.9999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(99.9999)))
+	fmt.Printf("99.99999%%:\t\t%v\n", toDuration(aggStats.Histogram.ValueAtPercentile(99.99999)))
 	fmt.Printf("stddev:\t\t\t%v\n", toDuration(int64(aggStats.Histogram.StdDev())))
 	// aggStats.Histogram.PercentilesPrint(os.Stdout,1,1)
 }
 
 func toDuration(usecs int64) time.Duration {
-	return time.Duration(usecs*1000)
+	return time.Duration(usecs * 1000)
 }
