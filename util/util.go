@@ -11,17 +11,31 @@ type HeaderList []string
 
 func (i *HeaderList) String() string {
 	out := []string{}
-    for _, s := range *i {
-        out = append(out, s)
-    }
-    return strings.Join(out, ", ")
+	for _, s := range *i {
+		out = append(out, s)
+	}
+	return strings.Join(out, ", ")
 }
 
 func (i *HeaderList) Set(value string) error {
-    *i = append(*i, value)
-    return nil
+	*i = append(*i, value)
+	return nil
 }
 
+type StatusCodeList []string
+
+func (i *StatusCodeList) String() string {
+	out := []string{}
+	for _, s := range *i {
+		out = append(out, s)
+	}
+	return strings.Join(out, ", ")
+}
+
+func (i *StatusCodeList) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
 
 // RedirectError specific error type that happens on redirection
 type RedirectError struct {
@@ -87,7 +101,7 @@ func MinDuration(d1 time.Duration, d2 time.Duration) time.Duration {
 	}
 }
 
-//EstimateHttpHeadersSize had to create this because headers size was not counted
+// EstimateHttpHeadersSize had to create this because headers size was not counted
 func EstimateHttpHeadersSize(headers http.Header) (result int64) {
 	result = 0
 

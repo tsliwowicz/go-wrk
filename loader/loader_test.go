@@ -31,7 +31,7 @@ func TestRunSingleLoadSession_HappyPath(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ch := make(chan *RequesterStats, 1)
-	cfg := NewLoadCfg(1, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false)
+	cfg := NewLoadCfg(1, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false, nil)
 
 	stats := runSession(t, cfg, ch)
 
@@ -65,7 +65,7 @@ func TestRunSingleLoadSession_ServerErrorsAccumulate(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ch := make(chan *RequesterStats, 1)
-	cfg := NewLoadCfg(1, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false)
+	cfg := NewLoadCfg(1, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false, nil)
 
 	stats := runSession(t, cfg, ch)
 
@@ -96,7 +96,7 @@ func TestRunSingleLoadSession_Stop(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ch := make(chan *RequesterStats, 1)
-	cfg := NewLoadCfg(30, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false)
+	cfg := NewLoadCfg(30, 1, ts.URL, "", "GET", "", nil, ch, 1000, true, false, false, false, "", "", "", false, nil)
 
 	go cfg.RunSingleLoadSession()
 
@@ -126,7 +126,7 @@ func TestRunSingleLoadSession_BadURL(t *testing.T) {
 	_ = l.Close()
 
 	ch := make(chan *RequesterStats, 1)
-	cfg := NewLoadCfg(1, 1, "http://"+addr, "", "GET", "", nil, ch, 200, true, false, false, false, "", "", "", false)
+	cfg := NewLoadCfg(1, 1, "http://"+addr, "", "GET", "", nil, ch, 200, true, false, false, false, "", "", "", false, nil)
 
 	stats := runSession(t, cfg, ch)
 
@@ -155,7 +155,7 @@ func TestRunSingleLoadSession_BodyAndMethod(t *testing.T) {
 	t.Cleanup(ts.Close)
 
 	ch := make(chan *RequesterStats, 1)
-	cfg := NewLoadCfg(1, 1, ts.URL, "hello", "POST", "", nil, ch, 1000, true, false, false, false, "", "", "", false)
+	cfg := NewLoadCfg(1, 1, ts.URL, "hello", "POST", "", nil, ch, 1000, true, false, false, false, "", "", "", false, nil)
 
 	stats := runSession(t, cfg, ch)
 

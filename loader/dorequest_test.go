@@ -33,7 +33,28 @@ func TestDoRequest_Success200(t *testing.T) {
 		_, _ = w.Write([]byte("hello"))
 	})
 
-	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "")
+	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "", nil)
+	if err != nil {
+		t.Fatalf("DoRequest err = %v", err)
+	}
+	if respSize <= 0 {
+		t.Errorf("respSize = %d, want > 0", respSize)
+	}
+	if dur <= 0 {
+		t.Errorf("duration = %v, want > 0", dur)
+	}
+}
+
+func TestDoRequest_CustomStatusCode(t *testing.T) {
+	ts := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("User-Agent"); got != USER_AGENT {
+			t.Errorf("User-Agent = %q, want %q", got, USER_AGENT)
+		}
+		w.WriteHeader(http.StatusNotModified)
+		_, _ = w.Write([]byte("hello"))
+	})
+
+	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "", []int{http.StatusNotModified})
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -57,7 +78,7 @@ func TestDoRequest_CustomHeadersAndHost(t *testing.T) {
 	})
 
 	hdr := map[string]string{"X-Foo": "bar"}
-	_, _, err := DoRequest(defaultTestClient(t), hdr, "GET", "myvhost", ts.URL, "")
+	_, _, err := DoRequest(defaultTestClient(t), hdr, "GET", "myvhost", ts.URL, "", nil)
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -75,7 +96,7 @@ func TestDoRequest_Body(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	_, _, err := DoRequest(defaultTestClient(t), nil, "POST", "", ts.URL, "payload")
+	_, _, err := DoRequest(defaultTestClient(t), nil, "POST", "", ts.URL, "payload", nil)
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -89,7 +110,7 @@ func TestDoRequest_QueryEscaping(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	_, _, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL+"/?q=hello world", "")
+	_, _, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL+"/?q=hello world", "", nil)
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -107,7 +128,7 @@ func TestDoRequest_301RedirectBlocked(t *testing.T) {
 		t.Fatalf("client() err = %v", err)
 	}
 
-	respSize, dur, err := DoRequest(c, nil, "GET", "", ts.URL, "")
+	respSize, dur, err := DoRequest(c, nil, "GET", "", ts.URL, "", nil)
 	if err == nil {
 		t.Fatalf("want err for blocked redirect, got nil (respSize=%d dur=%v)", respSize, dur)
 	}
@@ -136,7 +157,7 @@ func TestDoRequest_301RedirectAsResponse(t *testing.T) {
 		w.WriteHeader(http.StatusMovedPermanently)
 	})
 
-	respSize, dur, err := DoRequest(keepLastResponseClient(), nil, "GET", "", ts.URL, "")
+	respSize, dur, err := DoRequest(keepLastResponseClient(), nil, "GET", "", ts.URL, "", nil)
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -154,7 +175,7 @@ func TestDoRequest_307RedirectAsResponse(t *testing.T) {
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	})
 
-	respSize, dur, err := DoRequest(keepLastResponseClient(), nil, "GET", "", ts.URL, "")
+	respSize, dur, err := DoRequest(keepLastResponseClient(), nil, "GET", "", ts.URL, "", nil)
 	if err != nil {
 		t.Fatalf("DoRequest err = %v", err)
 	}
@@ -171,7 +192,7 @@ func TestDoRequest_Non2xxIsError(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
 
-	_, _, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "")
+	_, _, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "", nil)
 	if err == nil {
 		t.Fatal("want err for 500 response, got nil")
 	}
@@ -181,7 +202,7 @@ func TestDoRequest_Non2xxIsError(t *testing.T) {
 }
 
 func TestDoRequest_BadURL(t *testing.T) {
-	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", "://broken", "")
+	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", "://broken", "", nil)
 	if err == nil {
 		t.Fatal("want err for malformed URL, got nil")
 	}
@@ -209,7 +230,7 @@ func TestDoRequest_ServerClosesEarly(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "")
+	respSize, dur, err := DoRequest(defaultTestClient(t), nil, "GET", "", ts.URL, "", nil)
 	if err == nil {
 		t.Fatal("want err for connection closed mid-response, got nil")
 	}

@@ -7,20 +7,22 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
 	histo "github.com/HdrHistogram/hdrhistogram-go"
+
 	"github.com/tsliwowicz/go-wrk/loader"
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
 const APP_VERSION = "0.10"
 
-//default that can be overridden from the command line
+// default that can be overridden from the command line
 var versionFlag bool = false
 var helpFlag bool = false
-var duration int = 10 //seconds
+var duration int = 10 // seconds
 var goroutines int = 2
 var testUrl string
 var method string = "GET"
@@ -40,6 +42,7 @@ var clientKey string
 var caCert string
 var http2 bool
 var cpus int = 0
+var statusCodeList util.StatusCodeList
 
 func init() {
 	flag.BoolVar(&versionFlag, "v", false, "Print version details")
@@ -61,9 +64,10 @@ func init() {
 	flag.StringVar(&clientKey, "key", "", "Private key file name (SSL/TLS")
 	flag.StringVar(&caCert, "ca", "", "CA file to verify peer against (SSL/TLS)")
 	flag.BoolVar(&http2, "http", true, "Use HTTP/2")
+	flag.Var(&statusCodeList, "code", "Additional HTTP status codes to treat as success in addition to 2XX (you can define multiple)")
 }
 
-//printDefaults a nicer format for the defaults
+// printDefaults a nicer format for the defaults
 func printDefaults() {
 	fmt.Println("Usage: go-wrk <options> <url>")
 	fmt.Println("Options:")
@@ -73,11 +77,11 @@ func printDefaults() {
 }
 
 func mapToString(m map[string]int) string {
-	s := make([]string,0,len(m))
-	for k,v := range m {
-		s = append(s,fmt.Sprint(k,"=",v))
+	s := make([]string, 0, len(m))
+	for k, v := range m {
+		s = append(s, fmt.Sprint(k, "=", v))
 	}
-	return strings.Join(s,",")
+	return strings.Join(s, ",")
 }
 
 func main() {
@@ -93,6 +97,18 @@ func main() {
 		for _, hdr := range headerFlags {
 			hp := strings.SplitN(hdr, ":", 2)
 			header[hp[0]] = hp[1]
+		}
+	}
+
+	statusCodes := make([]int, 0, len(statusCodeList))
+	if len(statusCodeList) > 0 {
+		for _, statusCode := range statusCodeList {
+			code, err := strconv.Atoi(statusCode)
+			if err != nil {
+				fmt.Println("Invalid status code:", statusCode)
+				os.Exit(1)
+			}
+			statusCodes = append(statusCodes, code)
 		}
 	}
 
@@ -138,7 +154,7 @@ func main() {
 	}
 
 	loadGen := loader.NewLoadCfg(duration, goroutines, testUrl, reqBody, method, host, header, statsAggregator, timeoutms,
-		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2)
+		allowRedirectsFlag, disableCompression, disableKeepAlive, skipVerify, clientCert, clientKey, caCert, http2, statusCodes)
 
 	start := time.Now()
 
@@ -147,7 +163,7 @@ func main() {
 	}
 
 	responders := 0
-	aggStats := loader.RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1,int64(duration * 1000000),4)}
+	aggStats := loader.RequesterStats{ErrMap: make(map[string]int), Histogram: histo.New(1, int64(duration*1000000), 4)}
 
 	for responders < goroutines {
 		select {
@@ -160,7 +176,7 @@ func main() {
 			aggStats.TotRespSize += stats.TotRespSize
 			aggStats.TotDuration += stats.TotDuration
 			responders++
-			for k,v := range stats.ErrMap {
+			for k, v := range stats.ErrMap {
 				aggStats.ErrMap[k] += v
 			}
 			aggStats.Histogram.Merge(stats.Histogram)
@@ -178,7 +194,7 @@ func main() {
 		return
 	}
 
-	avgThreadDur := aggStats.TotDuration / time.Duration(responders) //need to average the aggregated duration
+	avgThreadDur := aggStats.TotDuration / time.Duration(responders) // need to average the aggregated duration
 
 	reqRate := float64(aggStats.NumRequests) / avgThreadDur.Seconds()
 	bytesRate := float64(aggStats.TotRespSize) / avgThreadDur.Seconds()
@@ -208,5 +224,5 @@ func main() {
 }
 
 func toDuration(usecs int64) time.Duration {
-	return time.Duration(usecs*1000)
+	return time.Duration(usecs * 1000)
 }

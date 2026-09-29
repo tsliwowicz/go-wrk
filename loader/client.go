@@ -3,20 +3,20 @@ package loader
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"fmt"
+	"time"
 
 	"golang.org/x/net/http2"
-	"time"
+
 	"github.com/tsliwowicz/go-wrk/util"
 )
 
 func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int, allowRedirects bool, clientCert, clientKey, caCert string, usehttp2 bool) (*http.Client, error) {
 
 	client := &http.Client{}
-	//overriding the default parameters
+	// overriding the default parameters
 	client.Transport = &http.Transport{
 		DisableCompression:    disableCompression,
 		DisableKeepAlives:     disableKeepAlive,
@@ -25,7 +25,7 @@ func client(disableCompression, disableKeepAlive, skipVerify bool, timeoutms int
 	}
 
 	if !allowRedirects {
-		//returning an error when trying to redirect. This prevents the redirection from happening.
+		// returning an error when trying to redirect. This prevents the redirection from happening.
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return util.NewRedirectError("redirection not allowed")
 		}
